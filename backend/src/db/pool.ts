@@ -6,8 +6,12 @@ pg.types.setTypeParser(pg.types.builtins.INT8, (v) => Number(v));
 export type Db = pg.Pool;
 export type Queryable = pg.Pool | pg.PoolClient;
 
-export function createPool(connectionString: string): Db {
-  return new pg.Pool({ connectionString, max: 20, idleTimeoutMillis: 30_000 });
+export function createPool(connectionString: string, onError: (err: Error) => void = () => undefined): Db {
+  const pool = new pg.Pool({ connectionString, max: 20, idleTimeoutMillis: 30_000 });
+  // An idle client losing its connection (database restart, failover, network blip) must
+  // not crash the server; the pool discards that client and reconnects on next use.
+  pool.on('error', onError);
+  return pool;
 }
 
 /** Run `fn` inside a transaction, committing on success and rolling back on error. */

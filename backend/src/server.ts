@@ -72,11 +72,10 @@ export async function buildApp(config: Config, opts: BuildOptions = {}): Promise
         : { level: config.LOG_LEVEL },
     trustProxy: true,
     bodyLimit: 64 * 1024,
-    disableRequestLogging: config.NODE_ENV === 'test',
   });
 
-  const db = createPool(config.DATABASE_URL);
-  const redis = createRedis(config.REDIS_URL);
+  const db = createPool(config.DATABASE_URL, (err) => app.log.error({ err }, 'postgres connection error'));
+  const redis = createRedis(config.REDIS_URL, (err) => app.log.warn({ err }, 'redis connection error'));
   if (opts.runMigrations ?? true) await migrate(db, (m) => app.log.info(m));
 
   const journey = new JourneyService(db, catalog);
