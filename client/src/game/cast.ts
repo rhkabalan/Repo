@@ -30,14 +30,16 @@ export const DESIGNS: Record<'traveler' | 'steadfast' | 'elder', Design> = {
     look: LOOKS.steadfast!,
     model: `${MODEL_CDN}/hf_20261119_021650_a8b10fc6-c05b-444e-82d1-759d2e541ff3.glb`,
     clips: {
-      /*STEADFAST_CLIPS*/
+      idle: `${MODEL_CDN}/hf_20261119_022825_2570af75-f4a3-4916-8bd2-8d88a488e998.glb`,
+      run: `${MODEL_CDN}/hf_20261119_022826_8bf73be0-0a65-4cd7-aca2-3c913515ffe1.glb`,
     },
   },
   elder: {
     look: LOOKS.elder!,
     model: `${MODEL_CDN}/hf_20261119_021652_baa0b0c5-0456-42ef-9f6d-60fc8b743160.glb`,
     clips: {
-      /*ELDER_CLIPS*/
+      idle: `${MODEL_CDN}/hf_20261119_022827_2cb37b63-0956-47bd-9a66-71e21a78a869.glb`,
+      run: `${MODEL_CDN}/hf_20261119_022828_4b416458-9afc-451e-912c-63bf113dc3c4.glb`,
     },
   },
 };
