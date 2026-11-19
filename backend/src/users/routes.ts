@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { displayNameSchema, uuidSchema } from '../lib/schemas.js';
 import { parse } from '../lib/validate.js';
 import type { Services } from '../server.js';
-import { getStats, getUser, updateUser } from './service.js';
+import { CHARACTER_IDS, getStats, getUser, updateUser } from './service.js';
 
 export async function userRoutes(app: FastifyInstance, { db, requireAuth }: Services) {
   app.get('/v1/me', { preHandler: requireAuth }, async (req) => {
@@ -16,6 +16,7 @@ export async function userRoutes(app: FastifyInstance, { db, requireAuth }: Serv
       z.object({
         displayName: displayNameSchema.optional(),
         avatarUrl: z.string().url().max(512).startsWith('https://').nullable().optional(),
+        characterId: z.enum(CHARACTER_IDS).optional(),
       }),
       req.body,
     );
@@ -58,6 +59,9 @@ export async function userRoutes(app: FastifyInstance, { db, requireAuth }: Serv
   app.get('/v1/users/:id', { preHandler: requireAuth }, async (req) => {
     const { id } = parse(z.object({ id: uuidSchema }), req.params);
     const [user, stats] = await Promise.all([getUser(db, id), getStats(db, id)]);
-    return { user: { id: user.id, displayName: user.displayName, avatarUrl: user.avatarUrl }, stats };
+    return {
+      user: { id: user.id, displayName: user.displayName, avatarUrl: user.avatarUrl, characterId: user.characterId },
+      stats,
+    };
   });
 }

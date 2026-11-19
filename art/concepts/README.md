@@ -4,11 +4,16 @@ Concept sheets supplied by the project team (marked "concept design · historica
 be verified"). Each folder holds the original `sheet.png` plus clean `front`, `side` and
 `back` crops (1024×1024), ready as input for multi-view image-to-3D.
 
-| Folder | Design | Palette / signature details | Current casting (`client/src/game/cast.ts`) |
-|---|---|---|---|
-| `traveler/` | 01 · The Traveler | cream linen robe, brown fringed shawl, leather belt, satchel | Player (Mecca) |
-| `steadfast/` | 02 · The Steadfast | blue-gray robe, heavy dark-brown fringed cloak, tan sash, full beard | Resting traveler NPC |
-| `elder/` | 03 · The Elder | cream robe, rust fringed shawl, long gray beard, wooden staff | Guide NPC |
+| Folder | Design | Palette / signature details |
+|---|---|---|
+| `traveler/` | 01 · The Traveler | cream linen robe, brown fringed shawl, leather belt, satchel |
+| `steadfast/` | 02 · The Steadfast | blue-gray robe, heavy dark-brown fringed cloak, tan sash, full beard |
+| `elder/` | 03 · The Elder | cream robe, rust fringed shawl, long gray beard, wooden staff |
+
+All three are **playable**: each player picks one and names it. NPCs (the guide, the
+resting traveler) use whichever designs no player in the session chose
+(`client/src/game/cast.ts`). Portraits for the selection screen are in
+`client/public/portraits/`.
 
 ## 3D pipeline
 

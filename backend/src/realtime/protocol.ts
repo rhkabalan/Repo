@@ -38,6 +38,8 @@ export interface RoomPlayerView {
   userId: string;
   displayName: string;
   avatarUrl: string | null;
+  /** The playable character this player chose (traveler, steadfast, elder). */
+  characterId: string | null;
   ready: boolean;
   connected: boolean;
   isHost: boolean;

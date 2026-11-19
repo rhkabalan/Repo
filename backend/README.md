@@ -161,7 +161,7 @@ Authenticated endpoints need `Authorization: Bearer <accessToken>`.
 | POST | `/v1/auth/logout` | | `{refreshToken}` → revokes the session |
 | POST | `/v1/auth/link/google` | ✓ | `{idToken}` → upgrades a guest, keeping progress |
 | GET | `/v1/me` | ✓ | Profile and stats (xp, level, wins, losses) |
-| PATCH | `/v1/me` | ✓ | `{displayName?, avatarUrl?}` |
+| PATCH | `/v1/me` | ✓ | `{displayName?, avatarUrl?, characterId?}`; `characterId` = `traveler` \| `steadfast` \| `elder` |
 | GET | `/v1/me/matches?limit=` | ✓ | Recent match history |
 | GET | `/v1/users/:id` | ✓ | Public profile and stats |
 | GET | `/v1/saves` | ✓ | List save slots (metadata only) |

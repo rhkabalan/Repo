@@ -59,7 +59,7 @@ solo, use the REST solo session endpoints instead.)
 | `error` | `code`, `message` |
 | `queue.joined` / `queue.left` | `gameId`, `position` |
 | `match.found` | `roomId`, `gameId` |
-| `room.state` | `room` (id, code, phase, players with ready/connected/isHost) |
+| `room.state` | `room` (id, code, phase, players with displayName, characterId, ready, connected, isHost) |
 | `room.left` | `roomId`, `reason` |
 | `game.countdown` | `startsAt` (epoch ms), `durationMs` |
 | `game.start` | `tickRate`, `serverTime` |

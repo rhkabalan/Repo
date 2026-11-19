@@ -2,11 +2,17 @@ import { randomInt } from 'node:crypto';
 import type { Queryable } from '../db/pool.js';
 import { notFound } from '../lib/errors.js';
 
+/** The playable characters (designs in art/concepts). */
+export const CHARACTER_IDS = ['traveler', 'steadfast', 'elder'] as const;
+export type CharacterId = (typeof CHARACTER_IDS)[number];
+
 export interface User {
   id: string;
   displayName: string;
   avatarUrl: string | null;
   isGuest: boolean;
+  /** null until the player has chosen a character. */
+  characterId: CharacterId | null;
   createdAt: string;
 }
 
@@ -23,6 +29,7 @@ interface UserRow {
   display_name: string;
   avatar_url: string | null;
   is_guest: boolean;
+  character_id: CharacterId | null;
   created_at: Date;
 }
 
@@ -31,10 +38,11 @@ const toUser = (r: UserRow): User => ({
   displayName: r.display_name,
   avatarUrl: r.avatar_url,
   isGuest: r.is_guest,
+  characterId: r.character_id,
   createdAt: r.created_at.toISOString(),
 });
 
-const USER_COLUMNS = 'id, display_name, avatar_url, is_guest, created_at';
+const USER_COLUMNS = 'id, display_name, avatar_url, is_guest, character_id, created_at';
 
 export const randomGuestName = () => `Player${randomInt(1000, 10000)}`;
 
@@ -70,15 +78,16 @@ export async function getUsers(db: Queryable, ids: string[]): Promise<Map<string
 export async function updateUser(
   db: Queryable,
   id: string,
-  patch: { displayName?: string; avatarUrl?: string | null },
+  patch: { displayName?: string; avatarUrl?: string | null; characterId?: CharacterId },
 ): Promise<User> {
   const { rows } = await db.query<UserRow>(
     `UPDATE users SET
         display_name = COALESCE($2, display_name),
         avatar_url   = CASE WHEN $3::boolean THEN $4 ELSE avatar_url END,
+        character_id = COALESCE($5, character_id),
         updated_at   = now()
       WHERE id = $1 RETURNING ${USER_COLUMNS}`,
-    [id, patch.displayName ?? null, patch.avatarUrl !== undefined, patch.avatarUrl ?? null],
+    [id, patch.displayName ?? null, patch.avatarUrl !== undefined, patch.avatarUrl ?? null, patch.characterId ?? null],
   );
   if (!rows[0]) throw notFound('User not found');
   return toUser(rows[0]);

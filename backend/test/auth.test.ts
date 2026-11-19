@@ -28,6 +28,22 @@ describe('guest accounts', () => {
     expect((await app.inject({ url: '/v1/me', headers: bearer('nope') })).statusCode).toBe(401);
   });
 
+  it('lets a player choose a character and name it', async () => {
+    const { tokens } = await guest(app);
+    const auth = bearer(tokens.accessToken);
+    expect((await app.inject({ url: '/v1/me', headers: auth })).json().user.characterId).toBeNull();
+    const res = await app.inject({
+      method: 'PATCH',
+      url: '/v1/me',
+      headers: auth,
+      payload: { displayName: 'أبو ذر', characterId: 'elder' },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().user).toMatchObject({ displayName: 'أبو ذر', characterId: 'elder' });
+    const bad = await app.inject({ method: 'PATCH', url: '/v1/me', headers: auth, payload: { characterId: 'wizard' } });
+    expect(bad.statusCode).toBe(400);
+  });
+
   it('lets a player rename themselves', async () => {
     const { tokens } = await guest(app);
     const res = await app.inject({

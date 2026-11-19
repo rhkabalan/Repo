@@ -2,12 +2,14 @@ import * as THREE from 'three';
 import './styles.css';
 import type { Catalog } from './content';
 import { buildMecca } from './game/mecca';
-import { GameSession } from './game/session';
+import { CHARACTER_IDS, isCharacterId, type CharacterId } from './game/cast';
+import { GameSession, type PlayerProfile } from './game/session';
 import { World } from './game/world';
 import { getLang, initialLang, setLang, t } from './i18n';
 import { api } from './net/api';
 import { PartyDriver, SoloDriver } from './net/driver';
 import { Realtime } from './net/realtime';
+import type { ApiError } from './net/api';
 import { esc, hideScreen, showScreen, toast } from './ui/ui';
 
 const canvas = document.getElementById('game') as HTMLCanvasElement;
@@ -16,6 +18,10 @@ const world = new World(canvas);
 let catalog: Catalog;
 let session: GameSession | null = null;
 let realtime: Realtime | null = null;
+let me: { id: string; displayName: string; characterId: string | null } = { id: '', displayName: '', characterId: null };
+
+const portrait = (id: string) => `/portraits/${id}.jpg`;
+const charName = (id: string) => t(`char_${id}` as 'char_traveler');
 
 // ---------------------------------------------------------------- cinematic backdrop
 let backdrop: { group: THREE.Group; stop: () => void } | null = null;
@@ -45,17 +51,75 @@ async function loadCatalog() {
   catalog = await api.get<Catalog>('/v1/journey/content');
 }
 
+async function loadProfile() {
+  me = (await api.get<{ user: typeof me }>('/v1/me')).user;
+}
+
 async function ensureSignedIn() {
   if (api.signedIn) {
     try {
-      await api.get('/v1/me');
+      await loadProfile();
       return;
     } catch {
       /* fall through to a new guest session */
     }
   }
   await api.signInAsGuest();
+  await loadProfile();
 }
+
+// ---------------------------------------------------------------- character select
+/** Pick one of the three characters and name it; saved to the account. */
+function chooseCharacter(then: () => void, back: () => void = home) {
+  let picked: CharacterId = isCharacterId(me.characterId) ? me.characterId : 'traveler';
+  const el = showScreen(`
+    <div class="sheet select">
+      <div class="top"><h2>${esc(t('chooseCharacter'))}</h2><button class="btn" data-back>${esc(t('back'))}</button></div>
+      <div class="cards">
+        ${CHARACTER_IDS.map(
+          (id) => `<button class="char-card" data-char="${id}">
+            <img src="${portrait(id)}" alt="" loading="eager" />
+            <div class="char-info"><h3>${esc(charName(id))}</h3><p>${esc(t(`tag_${id}` as 'tag_traveler'))}</p></div>
+          </button>`,
+        ).join('')}
+      </div>
+      <label class="name-field">
+        <span>${esc(t('characterName'))}</span>
+        <input class="name-input" maxlength="24" value="${esc(me.displayName)}" />
+        <small>${esc(t('nameHint'))}</small>
+      </label>
+      <p class="feedback"></p>
+      <div class="row end"><button class="btn btn-primary" data-confirm>${esc(t('confirm'))}</button></div>
+    </div>`);
+  const cards = [...el.querySelectorAll<HTMLElement>('[data-char]')];
+  const mark = () => cards.forEach((c) => c.classList.toggle('active', c.dataset.char === picked));
+  cards.forEach((c) =>
+    c.addEventListener('click', () => {
+      picked = c.dataset.char as CharacterId;
+      mark();
+    }),
+  );
+  mark();
+  el.querySelector('[data-back]')!.addEventListener('click', back);
+  el.querySelector('[data-confirm]')!.addEventListener('click', async () => {
+    const displayName = (el.querySelector('.name-input') as HTMLInputElement).value.trim();
+    const feedback = el.querySelector('.feedback') as HTMLElement;
+    // Same rules as the server, checked here so the message is in the player's language.
+    if ([...displayName].length < 3 || [...displayName].length > 24) return void (feedback.textContent = t('nameLength'));
+    if (!/^[\p{L}\p{N} _.-]+$/u.test(displayName)) return void (feedback.textContent = t('nameChars'));
+    try {
+      const res = await api.request<{ user: typeof me }>('PATCH', '/v1/me', { displayName, characterId: picked });
+      me = res.user;
+      then();
+    } catch (e) {
+      const err = e as ApiError;
+      feedback.textContent = err.status === 400 ? t('nameChars') : t('offline');
+    }
+  });
+}
+
+/** Run `next` once the player has a character, asking them to choose first if needed. */
+const withCharacter = (next: () => void) => (me.characterId ? next() : chooseCharacter(next));
 
 // ---------------------------------------------------------------- screens
 function home() {
@@ -72,13 +136,18 @@ function home() {
         <button class="btn" data-go="achievements">${esc(t('achievements'))}</button>
         <button class="btn" data-go="journal">${esc(t('journal'))}</button>
       </div>
+      <button class="me-chip" data-go="character">
+        ${me.characterId ? `<img src="${portrait(me.characterId)}" alt="" />` : ''}
+        <span><small>${esc(t('yourCharacter'))}</small>${esc(me.displayName)}${me.characterId ? ` · ${esc(charName(me.characterId))}` : ''}</span>
+      </button>
       <div class="lang"><button class="btn" data-go="lang">${esc(t('language'))}</button></div>
     </div>`);
   el.querySelectorAll<HTMLElement>('[data-go]').forEach((b) =>
     b.addEventListener('click', () => {
       const go = b.dataset.go;
-      if (go === 'play') void startSolo('mecca');
-      if (go === 'party') party();
+      if (go === 'play') withCharacter(() => void startSolo('mecca'));
+      if (go === 'party') withCharacter(party);
+      if (go === 'character') chooseCharacter(home);
       if (go === 'chapters') void chapters();
       if (go === 'achievements') void achievements();
       if (go === 'journal') void journal();
@@ -118,7 +187,7 @@ async function chapters() {
   el.querySelectorAll<HTMLElement>('[data-chapter]').forEach((b) =>
     b.addEventListener('click', () => {
       const id = b.dataset.chapter!;
-      if (id === 'mecca') void startSolo(id);
+      if (id === 'mecca') withCharacter(() => void startSolo(id));
       else toast(getLang() === 'ar' ? 'هذا الفصل قيد الإنتاج ثلاثي الأبعاد.' : 'This chapter is still in 3D production.');
     }),
   );
@@ -200,7 +269,7 @@ async function lobby(how: { create?: { partySize: number }; join?: string }) {
     return void toast(t('offline'), 'warn');
   }
   const rt = realtime;
-  const names = new Map<string, string>();
+  const profiles = new Map<string, PlayerProfile>();
   let roomState: any = null;
   const render = () => {
     if (!roomState) return;
@@ -212,7 +281,11 @@ async function lobby(how: { create?: { partySize: number }; join?: string }) {
         <div style="text-align:center">${esc(t('shareCode'))}</div>
         <div class="code">${esc(roomState.code ?? '')}</div>
         <div class="roster">
-          ${roomState.players.map((p: any) => `<div><span>${esc(p.displayName)}${p.userId === rt.userId ? ` (${esc(t('you'))})` : ''}</span><span>${p.isHost ? esc(t('host')) : p.ready ? '✓ ' + esc(t('ready')) : '…'}</span></div>`).join('')}
+          ${roomState.players
+            .map(
+              (p: any) => `<div><span class="who">${p.characterId ? `<img src="${portrait(p.characterId)}" alt="" />` : ''}<span>${esc(p.displayName)}${p.userId === rt.userId ? ` (${esc(t('you'))})` : ''}${p.characterId ? `<small>${esc(charName(p.characterId))}</small>` : ''}</span></span><span>${p.isHost ? esc(t('host')) : p.ready ? '✓ ' + esc(t('ready')) : '…'}</span></div>`,
+            )
+            .join('')}
           ${Array.from({ length: roomState.maxPlayers - roomState.players.length }, () => `<div><span>${esc(t('waiting'))}</span><span></span></div>`).join('')}
         </div>
         <div class="row">
@@ -231,7 +304,7 @@ async function lobby(how: { create?: { partySize: number }; join?: string }) {
   rt.on((m) => {
     if (m.t === 'room.state') {
       roomState = m.room;
-      for (const p of m.room.players) names.set(p.userId, p.displayName);
+      for (const p of m.room.players) profiles.set(p.userId, { name: p.displayName, characterId: p.characterId });
       if (!started && m.room.phase === 'lobby') render();
     } else if (m.t === 'error') {
       toast(m.message, 'warn');
@@ -239,7 +312,8 @@ async function lobby(how: { create?: { partySize: number }; join?: string }) {
       showScreen(`<div class="loading"><div class="spinner"></div>${esc(t('loading'))}</div>`);
     } else if (m.t === 'game.start' && !started) {
       started = true;
-      beginSession(new PartyDriver(rt, 'mecca'), names);
+      profiles.delete(rt.userId);
+      beginSession(new PartyDriver(rt, 'mecca'), profiles);
     }
   });
   if (how.create) rt.send({ t: 'room.create', gameId: 'athar-journey', partySize: how.create.partySize, options: { chapterId: 'mecca' } });
@@ -258,11 +332,11 @@ async function startSolo(chapterId: string) {
   beginSession(driver, new Map());
 }
 
-function beginSession(driver: SoloDriver | PartyDriver, names: Map<string, string>) {
+function beginSession(driver: SoloDriver | PartyDriver, party: Map<string, PlayerProfile>) {
   hideBackdrop();
   hideScreen();
   session?.dispose();
-  session = new GameSession(world, catalog, driver, hud, names, {
+  session = new GameSession(world, catalog, driver, hud, { name: me.displayName, characterId: me.characterId }, party, {
     onExit: () => endSession(),
     onComplete: () => {
       endSession();

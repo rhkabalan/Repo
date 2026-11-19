@@ -78,7 +78,7 @@ export class RealtimeHub {
     try {
       const claims = await this.tokens.verifyAccess(token);
       const user = await getUser(this.db, claims.userId);
-      conn = new Connection(user.id, user.displayName, user.avatarUrl, socket);
+      conn = new Connection(user.id, user.displayName, user.avatarUrl, user.characterId, socket);
     } catch {
       socket.close(CloseCode.AuthFailed, 'authentication failed');
       return;

@@ -16,6 +16,7 @@ export interface RoomPlayer {
   userId: string;
   displayName: string;
   avatarUrl: string | null;
+  characterId: string | null;
   connection: Connection | null;
   ready: boolean;
   /** Has permanently left the match (quit or grace expired). */
@@ -103,6 +104,7 @@ export class Room {
         userId: p.userId,
         displayName: p.displayName,
         avatarUrl: p.avatarUrl,
+        characterId: p.characterId,
         ready: p.ready,
         connected: p.connection?.open === true,
         isHost: p.userId === this.hostId,
@@ -123,6 +125,7 @@ export class Room {
       userId: conn.userId,
       displayName: conn.displayName,
       avatarUrl: conn.avatarUrl,
+      characterId: conn.characterId,
       connection: conn,
       ready: false,
       gone: false,

@@ -19,8 +19,11 @@ interface Player {
   seq: number;
 }
 
-async function player(name?: string): Promise<Player> {
+async function player(name?: string, characterId?: string): Promise<Player> {
   const g = await guest(app, name);
+  if (characterId) {
+    await app.inject({ method: 'PATCH', url: '/v1/me', headers: bearer(g.tokens.accessToken), payload: { characterId } });
+  }
   const client = await TestClient.connect(url, g.tokens.accessToken);
   await client.waitFor('welcome');
   return { id: g.user.id, token: g.tokens.accessToken, client, seq: 0 };
@@ -129,6 +132,20 @@ describe('ATHAR co-op journey (1–3 players)', () => {
     await solo.client.waitFor('game.end');
     expect((await journeyOf(solo)).xp).toBe(120);
     solo.client.close();
+  });
+
+  it("shows each member's chosen character in the room", async () => {
+    const host = await player('Hamza', 'steadfast');
+    const friend = await player('Layla', 'elder');
+    host.client.send({ t: 'room.create', gameId: GAME, partySize: 2, options: { chapterId: 'mecca' } });
+    const code = (await host.client.waitFor('room.state')).room.code;
+    friend.client.send({ t: 'room.join', code });
+    const state = await host.client.waitFor('room.state', (m) => m.room.players.length === 2);
+    expect(state.room.players.map((p: { displayName: string; characterId: string }) => [p.displayName, p.characterId])).toEqual([
+      ['Hamza', 'steadfast'],
+      ['Layla', 'elder'],
+    ]);
+    [host, friend].forEach((p) => p.client.close());
   });
 
   it('waits for every seat to be filled and rejects extra players', async () => {

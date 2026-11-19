@@ -16,12 +16,21 @@ export const DESIGNS: Record<'traveler' | 'steadfast' | 'elder', Design> = {
   elder: { look: LOOKS.elder! /* , model: '/models/elder.glb' */ },
 };
 
-/** Casting for the Mecca chapter. Change a line here to recast a role. */
-export const CAST = {
-  player: DESIGNS.traveler,
-  guide: DESIGNS.elder,
-  restingTraveler: DESIGNS.steadfast,
-};
+export type CharacterId = keyof typeof DESIGNS;
+export const CHARACTER_IDS: CharacterId[] = ['traveler', 'steadfast', 'elder'];
+export const isCharacterId = (v: unknown): v is CharacterId => CHARACTER_IDS.includes(v as CharacterId);
 
-/** Party members get distinct colourways so friends can tell each other apart. */
-export const PARTY_LOOKS: Look[] = [LOOKS.companion1!, LOOKS.companion2!];
+/** Players' characters come from their own choice; this falls back for anyone who hasn't chosen. */
+export const designFor = (id: string | null | undefined): Design => (isCharacterId(id) ? DESIGNS[id] : DESIGNS.traveler);
+
+/**
+ * NPC casting for Mecca. NPCs take designs no player in the session is using, so the guide
+ * never looks like you; when every design is taken they use neutral townsfolk looks.
+ */
+export function castNpcs(taken: string[]): { guide: Design; restingTraveler: Design } {
+  const free = (['elder', 'steadfast', 'traveler'] as CharacterId[]).filter((id) => !taken.includes(id));
+  return {
+    guide: free[0] ? DESIGNS[free[0]] : { look: LOOKS.guide! },
+    restingTraveler: free[1] ? DESIGNS[free[1]] : { look: LOOKS.wayfarer! },
+  };
+}

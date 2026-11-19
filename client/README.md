@@ -38,8 +38,12 @@ To point a build at a deployed API, set `VITE_API_URL=https://api.example.com`.
   and share world progress, while each makes their own choices.
 - **Arabic and English:** right-to-left layout for Arabic, with Amiri and Noto Kufi Arabic
   fonts. All game content comes from the server in the chosen language.
-- **Screens:** home (over a cinematic view of the lane), chapter map, achievements and
-  journal.
+- **Choose your character:** players pick the Traveler, the Steadfast or the Elder (portraits
+  from the concept sheets) and name their character. The choice is saved to their account,
+  shown to party members in the lobby and the world, and can be changed from the home screen.
+  NPCs automatically use designs no player picked.
+- **Screens:** home (over a cinematic view of the lane), character select, chapter map,
+  achievements and journal.
 
 ## Layout
 
@@ -55,6 +59,7 @@ src/
   game/textures.ts   procedural plaster/stone/sand/cloth/wood textures
   game/mecca.ts      Mecca environment, colliders, interaction points
   game/character.ts  characters (procedural stand-in or rigged GLB)
+  game/cast.ts       character designs, models, NPC casting
   game/controls.ts   keyboard, touch joystick, tap-to-walk
   game/player.ts     movement, collisions, follow camera
   game/session.ts    the Mecca mission: interactions, HUD, objectives, minimap

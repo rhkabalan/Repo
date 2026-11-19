@@ -33,6 +33,7 @@ export class Connection {
     readonly userId: string,
     readonly displayName: string,
     readonly avatarUrl: string | null,
+    readonly characterId: string | null,
     readonly socket: WebSocket,
   ) {}
 

@@ -3,8 +3,8 @@ import type { Catalog, Chapter } from '../content';
 import { getLang, t } from '../i18n';
 import type { Award, MissionDriver, RemotePlayer, RunState } from '../net/driver';
 import { esc, modal, modalOpen, sequencePuzzle, toast, translate } from '../ui/ui';
-import { Character, LOOKS, type Anim, type Look } from './character';
-import { CAST, PARTY_LOOKS, type Design } from './cast';
+import { Character, LOOKS, type Anim } from './character';
+import { castNpcs, designFor, type Design } from './cast';
 import { Controls } from './controls';
 import { buildMecca, type Interactable } from './mecca';
 import { PlayerController } from './player';
@@ -57,6 +57,11 @@ const HINTS = {
 
 const SYMBOL_ICONS: Record<string, string> = { sun: '☀️', shelter: '⛺', water: '💧' };
 
+export interface PlayerProfile {
+  name: string;
+  characterId: string | null;
+}
+
 export interface SessionCallbacks {
   onExit(): void;
   onComplete(): void;
@@ -86,13 +91,15 @@ export class GameSession {
     private readonly catalog: Catalog,
     private readonly driver: MissionDriver,
     private readonly hud: HTMLElement,
-    private readonly names: Map<string, string>,
+    private readonly profile: PlayerProfile,
+    private readonly party: Map<string, PlayerProfile>,
     private readonly cb: SessionCallbacks,
   ) {
     this.chapter = catalog.chapters.find((c) => c.id === driver.chapterId)!;
     this.add(this.env.group);
 
-    const me = new Character(CAST.player.look, CAST.player.model);
+    const mine = designFor(this.profile.characterId);
+    const me = new Character(mine.look, mine.model);
     me.root.position.copy(this.env.spawn);
     me.root.rotation.y = Math.PI;
     this.add(me.root);
@@ -124,8 +131,10 @@ export class GameSession {
     this.jar.visible = false;
     me.root.add(this.jar);
 
-    this.spawnNpc(CAST.guide, 'guide', 'talk', Math.PI * 0.75);
-    this.spawnNpc(CAST.restingTraveler, 'traveler', 'sit', Math.PI / 2);
+    const taken = [this.profile.characterId, ...[...party.values()].map((p) => p.characterId)].filter((x): x is string => !!x);
+    const npcCast = castNpcs(taken);
+    this.spawnNpc(npcCast.guide, 'guide', 'talk', Math.PI * 0.75);
+    this.spawnNpc(npcCast.restingTraveler, 'traveler', 'sit', Math.PI / 2);
     for (const [x, z, yaw] of [[-2.4, -40, 1], [2.8, -11, -2], [-11, -72, 0.6]] as const) {
       const c = new Character(LOOKS.townsman!);
       c.root.position.set(x, 0, z);
@@ -238,12 +247,13 @@ export class GameSession {
   }
 
   private syncRemote(players: RemotePlayer[]) {
-    const looks: Look[] = PARTY_LOOKS;
     for (const p of players) {
       let r = this.remote.get(p.id);
       if (!r) {
-        const c = new Character(looks[this.remote.size % looks.length]!);
-        c.setLabel(this.names.get(p.id) ?? '…');
+        const profile = this.party.get(p.id);
+        const design = designFor(profile?.characterId);
+        const c = new Character(design.look, design.model);
+        c.setLabel(profile?.name ?? '…');
         c.root.position.set(p.x, 0, p.y);
         this.add(c.root);
         r = { c, target: new THREE.Vector3(p.x, 0, p.y), yaw: 0 };
@@ -254,7 +264,7 @@ export class GameSession {
       r.c.setAnim((p.anim as Anim) ?? 'idle');
     }
     this.el('.party-list').innerHTML = players
-      .map((p) => `<div class="pill">${p.active ? '●' : '○'} ${esc(this.names.get(p.id) ?? '…')}</div>`)
+      .map((p) => `<div class="pill">${p.active ? '●' : '○'} ${esc(this.party.get(p.id)?.name ?? '…')}</div>`)
       .join('');
   }
 
