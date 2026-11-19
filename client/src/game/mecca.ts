@@ -64,7 +64,8 @@ export function buildMecca(): Environment {
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i);
     const y = pos.getY(i);
-    const d = Math.hypot(x, y + 50);
+    // Plane local y = -world z, so the valley centre at world z = -50 is local y = +50.
+    const d = Math.hypot(x, y - 50);
     // Flat playable valley floor, rolling dunes beyond.
     const dune = d > 70 ? Math.sin(x * 0.05) * Math.cos(y * 0.04) * 2 + (d - 70) * 0.04 : 0;
     pos.setZ(i, dune + Math.sin(x * 0.7) * Math.cos(y * 0.6) * 0.03 - 0.04);
