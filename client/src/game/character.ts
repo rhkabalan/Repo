@@ -217,10 +217,11 @@ export class Character {
             const clip = (await Character.load(clipUrl)).animations[0]?.clone();
             if (!clip) return undefined;
             clip.name = name;
-            // Extra clips come from separately rigged files whose position data is recorded
-            // in a different scale and may include root motion, which sinks or slides the
-            // character. Keep only joint rotations; height and placement stay the model's.
+            // Extra clips come from separately rigged files: their position data uses another
+            // scale and their armature node carries its own axis correction. Keep only joint
+            // rotations here; bones are filtered against the model's skeleton below.
             clip.tracks = clip.tracks.filter((t) => t.name.endsWith('.quaternion'));
+            (clip.userData as { external?: boolean }).external = true;
             return clip;
           } catch {
             return undefined;
@@ -238,8 +239,19 @@ export class Character {
           }
         }
       }
-      const animations = [...baseClips, ...extra.filter((c): c is THREE.AnimationClip => !!c)];
       const model = cloneSkinned(scene);
+      const bones: THREE.Bone[] = [];
+      model.traverse((o) => {
+        if ((o as THREE.Bone).isBone) bones.push(o as THREE.Bone);
+      });
+      const boneNames = new Set(bones.map((b) => b.name));
+      const external = extra.filter((c): c is THREE.AnimationClip => !!c);
+      for (const clip of external) {
+        // Only drive real bones of this model, never the armature/root nodes: their rotation
+        // in another file would tip the whole character over (into the ground).
+        clip.tracks = clip.tracks.filter((t) => boneNames.has(THREE.PropertyBinding.parseTrackName(t.name).nodeName));
+      }
+      const animations = [...baseClips, ...external];
       model.traverse((o) => {
         if ((o as THREE.Mesh).isMesh) o.castShadow = o.receiveShadow = true;
       });
@@ -250,6 +262,12 @@ export class Character {
       model.position.y = -box.min.y * scale;
       this.root.remove(this.body);
       this.root.add(model);
+      // Ground lock: remember how high the feet sit at rest, then keep them from going lower.
+      this.model = model;
+      this.modelBaseY = model.position.y;
+      this.feet = bones.filter((b) => /foot|toe|ankle/i.test(b.name));
+      if (this.feet.length === 0) this.feet = bones;
+      this.restFootY = this.lowestFoot();
       this.mixer = new THREE.AnimationMixer(model);
       for (const clip of animations) this.actions.set(clip.name.toLowerCase(), this.mixer.clipAction(clip));
       this.playClip(this.anim);
@@ -308,9 +326,33 @@ export class Character {
     this.root.add(this.label);
   }
 
+  private model: THREE.Object3D | null = null;
+  private modelBaseY = 0;
+  private feet: THREE.Bone[] = [];
+  private restFootY = 0;
+  private readonly tmp = new THREE.Vector3();
+
+  /** Lowest foot bone height, in the character root's local space. */
+  private lowestFoot(): number {
+    this.root.updateMatrixWorld(true);
+    let min = Infinity;
+    for (const b of this.feet) {
+      b.getWorldPosition(this.tmp);
+      this.root.worldToLocal(this.tmp);
+      min = Math.min(min, this.tmp.y);
+    }
+    return Number.isFinite(min) ? min : 0;
+  }
+
   update(dt: number) {
     if (this.mixer) {
       this.mixer.update(dt);
+      if (this.model && this.feet.length) {
+        // Lift the body if an animation pushes the feet below where they rest.
+        this.model.position.y = this.modelBaseY;
+        const sink = this.restFootY - this.lowestFoot();
+        if (sink > 0.005) this.model.position.y = this.modelBaseY + sink;
+      }
       return;
     }
     const speed = this.anim === 'run' ? 11 : this.anim === 'walk' || this.anim === 'carry' ? 7 : 1.6;
