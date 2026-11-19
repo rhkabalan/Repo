@@ -5,6 +5,8 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
+    // Allow the Claude app's preview proxy (and LAN devices) to reach the dev server.
+    allowedHosts: true,
     proxy: {
       '/v1/realtime': { target: 'ws://localhost:8080', ws: true },
       '/v1': 'http://localhost:8080',
