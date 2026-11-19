@@ -5,6 +5,9 @@ import { LOOKS, type Look } from './character';
  * rigged 3D model is ready, drop the .glb in public/models/ and set `model`; every
  * character using that design switches over, keeping the stand-in as fallback.
  */
+/** Where generated models are served from until they are copied into public/models. */
+const MODEL_CDN = 'https://d8j0ntlcm91z4.cloudfront.net/user_38DJH2MZxmBs8rcoGInHY3dJHJE';
+
 export interface Design {
   look: Look;
   /** Rigged GLB (its built-in clip is used as `walk`). */
@@ -14,7 +17,15 @@ export interface Design {
 }
 
 export const DESIGNS: Record<'traveler' | 'steadfast' | 'elder', Design> = {
-  traveler: { look: LOOKS.traveler! /* , model: '/models/traveler.glb' */ },
+  traveler: {
+    look: LOOKS.traveler!,
+    // Generated from art/concepts/traveler (Higgsfield multi-view → rigged, walk clip built in).
+    model: `${MODEL_CDN}/hf_20261119_014717_c5558e0c-b2ab-4148-88ec-1366c23a3a74.glb`,
+    clips: {
+      idle: `${MODEL_CDN}/hf_20261119_015942_f6d34e6c-b465-4684-89c9-942dabaad33d.glb`,
+      run: `${MODEL_CDN}/hf_20261119_015943_79bdcd5c-2c4b-40ee-a293-3314b6373e46.glb`,
+    },
+  },
   steadfast: { look: LOOKS.steadfast! /* , model: '/models/steadfast.glb' */ },
   elder: { look: LOOKS.elder! /* , model: '/models/elder.glb' */ },
 };
