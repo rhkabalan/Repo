@@ -1,8 +1,48 @@
-# Game Backend
+# ATHAR Backend
 
-The authoritative server for the game: player accounts, cloud saves, leaderboards,
-matchmaking, and real-time multiplayer. It's engine-agnostic: any client (iOS, Android,
-web, desktop, consoles) talks to it over HTTPS + WebSocket.
+The server for **ATHAR — Abu Dharr al-Ghifari and the Interactive Historical Journey**:
+player accounts, the bilingual (Arabic / English) chapter content, server-side journey
+progress that syncs across devices, achievements and the journal, plus cloud saves,
+leaderboards and real-time multiplayer infrastructure. It's engine-agnostic: any client
+(browser, iOS, Android, desktop) talks to it over HTTPS + WebSocket.
+
+## The journey (ATHAR gameplay)
+
+The story content lives in `src/journey/content/catalog.ts`: five chapters in order
+(Mecca, Medina, Road to Tabuk, Al-Sham, Al-Rabadhah). Every string is in Arabic and English,
+and every item is tagged with:
+
+- **certainty:** `sourced`, `uncertain` or `fictional`, so gameplay inventions are never
+  presented as history;
+- **review status:** `draft`, `in_review` or `approved`, for the scholarly and Arabic-language
+  review.
+
+**Mecca** is modelled in full from the progress report:
+
+| Step | Rule | XP |
+|---|---|---|
+| Guide conversation | Route-board clue or spoken clue (feeds Observation / Memory) | |
+| Account: Ali's hospitality | In Hospitality Lane | 20 |
+| Passage puzzle | Sun → Shelter → Water; wrong answers get feedback and retries; opens the Meeting Courtyard | 20 |
+| Account: the public declaration | In the Meeting Courtyard (needs the passage) | 20 |
+| Water for the traveler (optional) | 3 deliveries; awards the Compassion badge | 20 |
+| Story-order puzzle | Needs both accounts | |
+| Journal emphasis | Required before completion | |
+| Mission complete | Mecca badge; unlocks Medina | 40 |
+| **Maximum** | | **120** |
+
+The server enforces the rules. Puzzle answers are checked on the server and solutions are
+never sent to clients. Areas, puzzles and chapters unlock only when their prerequisites
+are met. Each reward pays out at most once, so retries, replays and simultaneous requests
+from two devices can't inflate XP. Replaying a chapter resets the run so the player can
+choose differently; the journal and skills follow the choices from the latest completion.
+
+Medina, Tabuk, Al-Sham and Al-Rabadhah are shells (`format: 'legacy'`) until their clues
+and choices are ported from the prototype.
+
+> **Before release:** the discovery `sources` arrays are intentionally empty. Copy in the
+> references used by the prototype's discovery panels; nothing has been invented. All Arabic
+> and English text is a draft for language and scholarly review.
 
 ## Stack
 
@@ -32,9 +72,9 @@ web, desktop, consoles) talks to it over HTTPS + WebSocket.
 - **Real-time multiplayer:** quick-match queue, private rooms with invite codes, ready
   checks, host start, in-room chat. A fixed-tick authoritative simulation acknowledges
   inputs (for client prediction), and players can reconnect mid-match.
-- **Pluggable games:** game rules live behind a `GameDefinition` interface
-  (`src/games/types.ts`). *Orb Rush* (`src/games/orb-rush`) is a reference implementation
-  until the real game is designed.
+- **Pluggable real-time games:** multiplayer rules live behind a `GameDefinition` interface
+  (`src/games/types.ts`). None is registered by default. *Orb Rush* (`src/games/orb-rush`)
+  is the reference implementation and test fixture for a future multiplayer mode.
 - **Production basics:** Helmet headers, CORS, per-IP rate limits backed by Redis,
   structured logs, `/health` and `/ready` probes, graceful shutdown, Docker image, CI.
 
@@ -92,7 +132,10 @@ Authenticated endpoints need `Authorization: Bearer <accessToken>`.
 | Method | Path | Auth | Description |
 |---|---|---|---|
 | GET | `/health`, `/ready` | | Liveness / readiness probes |
-| GET | `/v1/games` | | Available games and their modes |
+| GET | `/v1/journey/content?lang=ar\|en` | | Chapter catalog in one language (also reads `Accept-Language`) |
+| GET | `/v1/journey?lang=` | ✓ | Player's progress, achievements (XP, badges, skills, counts) and journal |
+| POST | `/v1/journey/events?lang=` | ✓ | Apply a player action (see below) → `{result, awards, journey}` |
+| GET | `/v1/games` | | Registered real-time games and their modes |
 | POST | `/v1/auth/guest` | | `{displayName?}` → new guest session |
 | POST | `/v1/auth/google` | | `{idToken}` → session (creates the account on first sign-in) |
 | POST | `/v1/auth/refresh` | | `{refreshToken}` → new token pair (rotates) |
@@ -116,11 +159,29 @@ Session responses look like
 Store the refresh token in secure storage (Keychain / Android Keystore). For guests it's
 their only credential.
 
+**Journey events** (`POST /v1/journey/events`), each with a `chapterId`:
+
+| `type` | Extra fields | Result |
+|---|---|---|
+| `chapter.start` | | |
+| `discovery.find` | `discoveryId` | XP on first discovery; added to the journal |
+| `puzzle.attempt` | `puzzleId`, `answer: string[]` | `{correct, attempts, correctPrefix?, openedAreas?}` |
+| `choice.make` | `choiceId`, `optionId` | |
+| `task.progress` | `taskId`, `amount` | `{count, goal, complete}` |
+| `mission.complete` | | 409 `prerequisites_missing` lists what's left |
+| `chapter.replay` | | Only for completed chapters |
+
 **WebSocket:** `GET /v1/realtime`. See [docs/REALTIME.md](docs/REALTIME.md).
 
-## Adding the real game
+## Editing content
 
-1. Create `src/games/<your-game>/index.ts` implementing `GameDefinition`: state, input
+Edit `src/journey/content/catalog.ts`. `npm test` checks the content: every reference
+resolves, every string has both languages, and Mecca still totals 120 XP. When a release
+adds chapters, bump `catalog.version`; existing players' progress is upgraded automatically.
+
+## Adding a real-time game mode
+
+1. Create `src/games/<mode>/index.ts` implementing `GameDefinition`: state, input
    schema, `tick`, `snapshot` (per-viewer, so information can be hidden), results and XP.
 2. Register it in `src/games/registry.ts`.
 
@@ -140,7 +201,8 @@ src/
   leaderboards/       Postgres + Redis ranked boards
   matches/            match recording (history, XP, scores)
   solo/               client-simulated solo sessions
-  games/              GameDefinition interface, registry, Orb Rush reference game
+  journey/            ATHAR chapters: bilingual content, rules engine, progress, journal
+  games/              real-time GameDefinition interface, registry, Orb Rush reference
   realtime/           protocol, hub (sockets), matchmaker, rooms
   db/                 pool, migrations
 test/                 integration tests (HTTP + real WebSocket matches)

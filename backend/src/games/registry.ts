@@ -24,4 +24,11 @@ export class GameRegistry {
   }
 }
 
-export const defaultGames = (): AnyGameDefinition[] => [createOrbRush()];
+/**
+ * Games available for real-time rooms and arcade-style solo runs. ATHAR's story journey
+ * runs through the journey module instead. Orb Rush remains as the reference
+ * implementation (and test fixture) for when a multiplayer mode is designed.
+ */
+export const defaultGames = (): AnyGameDefinition[] => [];
+
+export { createOrbRush };

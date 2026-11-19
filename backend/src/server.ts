@@ -13,6 +13,9 @@ import { migrate } from './db/migrate.js';
 import { createPool, type Db } from './db/pool.js';
 import { GameRegistry, defaultGames } from './games/registry.js';
 import type { AnyGameDefinition } from './games/types.js';
+import { catalog } from './journey/content/catalog.js';
+import { journeyRoutes } from './journey/routes.js';
+import { JourneyService } from './journey/service.js';
 import { leaderboardRoutes } from './leaderboards/routes.js';
 import { LeaderboardService } from './leaderboards/service.js';
 import { AppError } from './lib/errors.js';
@@ -36,6 +39,7 @@ export interface Services {
   tokens: TokenService;
   auth: AuthService;
   saves: SaveService;
+  journey: JourneyService;
   leaderboards: LeaderboardService;
   matches: MatchService;
   solo: SoloService;
@@ -92,6 +96,7 @@ export async function buildApp(config: Config, opts: BuildOptions = {}): Promise
     tokens,
     auth: new AuthService(db, tokens, opts.googleVerifier ?? createGoogleVerifier(config.GOOGLE_CLIENT_IDS)),
     saves: new SaveService(db),
+    journey: new JourneyService(db, catalog),
     leaderboards,
     matches,
     solo: new SoloService(redis, games, matches),
@@ -164,6 +169,7 @@ export async function buildApp(config: Config, opts: BuildOptions = {}): Promise
     await saveRoutes(scope, services);
     await leaderboardRoutes(scope, services);
     await soloRoutes(scope, services);
+    await journeyRoutes(scope, services);
   });
 
   app.addHook('onClose', async () => {
