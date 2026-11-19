@@ -99,7 +99,7 @@ export class GameSession {
     this.add(this.env.group);
 
     const mine = designFor(this.profile.characterId);
-    const me = new Character(mine.look, mine.model);
+    const me = new Character(mine.look, mine.model, mine.clips);
     me.root.position.copy(this.env.spawn);
     me.root.rotation.y = Math.PI;
     this.add(me.root);
@@ -153,7 +153,7 @@ export class GameSession {
 
   private spawnNpc(design: Design, id: string, anim: Anim, yaw: number) {
     const it = this.env.interactables.find((i) => i.id === id)!;
-    const c = new Character(design.look, design.model);
+    const c = new Character(design.look, design.model, design.clips);
     c.root.position.copy(it.position);
     c.root.rotation.y = yaw;
     c.setAnim(anim);
@@ -252,7 +252,7 @@ export class GameSession {
       if (!r) {
         const profile = this.party.get(p.id);
         const design = designFor(profile?.characterId);
-        const c = new Character(design.look, design.model);
+        const c = new Character(design.look, design.model, design.clips);
         c.setLabel(profile?.name ?? '…');
         c.root.position.set(p.x, 0, p.y);
         this.add(c.root);

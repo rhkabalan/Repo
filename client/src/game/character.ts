@@ -57,10 +57,15 @@ export class Character {
   private label: THREE.Sprite | null = null;
   carrying: THREE.Object3D | null = null;
 
-  constructor(look: Look, modelUrl?: string) {
+  /**
+   * @param modelUrl rigged GLB for this character
+   * @param clips extra GLBs on the same skeleton, each contributing named animation clips
+   *              (e.g. { idle: '/models/traveler-idle.glb', run: '/models/traveler-run.glb' })
+   */
+  constructor(look: Look, modelUrl?: string, clips: Record<string, string> = {}) {
     this.root.add(this.body);
     this.buildProcedural(look);
-    if (modelUrl) void this.loadModel(modelUrl);
+    if (modelUrl) void this.loadModel(modelUrl, clips);
   }
 
   private mat(color: string, rough = 0.85, map?: THREE.Texture) {
@@ -195,12 +200,29 @@ export class Character {
     this.body.scale.setScalar(h * 1.08);
   }
 
-  private async loadModel(url: string) {
+  private static load(url: string) {
     if (!modelCache.has(url)) {
       modelCache.set(url, gltf.loadAsync(url).then((g) => ({ scene: g.scene, animations: g.animations })));
     }
+    return modelCache.get(url)!;
+  }
+
+  private async loadModel(url: string, clips: Record<string, string>) {
     try {
-      const { scene, animations } = await modelCache.get(url)!;
+      const { scene, animations: baseClips } = await Character.load(url);
+      // Pull clips from the extra GLBs and name them by role (idle, run, ...).
+      const extra = await Promise.all(
+        Object.entries(clips).map(async ([name, clipUrl]) => {
+          try {
+            const clip = (await Character.load(clipUrl)).animations[0]?.clone();
+            if (clip) clip.name = name;
+            return clip;
+          } catch {
+            return undefined;
+          }
+        }),
+      );
+      const animations = [...baseClips, ...extra.filter((c): c is THREE.AnimationClip => !!c)];
       const model = cloneSkinned(scene);
       model.traverse((o) => {
         if ((o as THREE.Mesh).isMesh) o.castShadow = o.receiveShadow = true;
@@ -222,7 +244,9 @@ export class Character {
 
   private playClip(anim: Anim) {
     if (!this.mixer) return;
-    const pick = (names: string[]) => names.map((n) => this.actions.get(n)).find(Boolean);
+    // Exact clip name first, then any clip whose name contains it (e.g. "Armature|Casual_Walk").
+    const pick = (names: string[]) =>
+      names.map((n) => this.actions.get(n) ?? [...this.actions].find(([k]) => k.includes(n))?.[1]).find(Boolean);
     const next =
       pick({ walk: ['walk', 'walking'], run: ['run', 'running', 'walk'], idle: ['idle'], talk: ['talk', 'idle'], carry: ['carry', 'walk'], interact: ['interact', 'idle'], sit: ['sit', 'idle'] }[anim]) ??
       this.actions.values().next().value;

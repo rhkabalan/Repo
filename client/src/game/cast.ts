@@ -7,7 +7,10 @@ import { LOOKS, type Look } from './character';
  */
 export interface Design {
   look: Look;
+  /** Rigged GLB (its built-in clip is used as `walk`). */
   model?: string;
+  /** Extra animation GLBs on the same rig, by role. */
+  clips?: Record<string, string>;
 }
 
 export const DESIGNS: Record<'traveler' | 'steadfast' | 'elder', Design> = {
