@@ -109,7 +109,7 @@ export function buildMecca(): Environment {
   path.rotation.x = -Math.PI / 2;
   path.position.set(0, 0.03, -27);
   // Training yard and back alley floors.
-  for (const [x, z, w, d, rep] of [[0, 9.5, 19, 14, 6], [13.5, -31, 6, 50, 14], [7, -26.2, 7, 6, 3], [0, -52.7, 32, 10, 8]] as const) {
+  for (const [x, z, w, d, rep] of [[0, 12.6, 19, 20, 8], [13.5, -31, 6, 50, 14], [7, -26.2, 7, 6, 3], [0, -52.7, 32, 10, 8]] as const) {
     const t = stoneBlocks(11).clone();
     t.needsUpdate = true;
     t.repeat.set(w / 3, rep);
@@ -255,9 +255,9 @@ export function buildMecca(): Environment {
     g.add(shadowed(m));
     block(x, z, w, d);
   };
-  yardWall(0, 17, 21, 1);
-  yardWall(-10, 9.5, 1, 16);
-  yardWall(10, 9.5, 1, 16);
+  yardWall(0, 23, 21, 1);
+  yardWall(-10, 12.5, 1, 22);
+  yardWall(10, 12.5, 1, 22);
   yardWall(-6.8, 2.4, 6.4, 1, 2.2);
   yardWall(6.8, 2.4, 6.4, 1, 2.2);
   // Sparring posts and a weapons rack.
@@ -648,7 +648,7 @@ export function buildMecca(): Environment {
     group: g,
     interactables,
     colliders,
-    spawn: v3(0, 0, 14),
+    spawn: v3(0, 0, 13),
     areaAt: (p) => {
       if (p.z < gateZ - 0.8) return 'meeting-courtyard';
       if (p.z > 2.9) return 'training-yard';
@@ -669,8 +669,8 @@ export function buildMecca(): Environment {
       removeCollider('back-gate');
     },
     pickups: {
-      'water-3': v3(-8.6, 0, 15.6),
-      'wood-2': v3(8.8, 0, 15.8),
+      'water-3': v3(-8.6, 0, 19.5),
+      'wood-2': v3(8.8, 0, 20),
       'water-1': v3(-2.9, 0, -8.5),
       'provisions-1': v3(2.9, 0, -20.5),
       'rope-1': v3(-2.9, 0, -38.5),
@@ -695,7 +695,7 @@ export function buildMecca(): Environment {
     routeGoal: { min: new THREE.Vector2(-10.4, -61), max: new THREE.Vector2(-7.6, -58.9) },
     obstacleZone: { min: new THREE.Vector2(-10.5, -58), max: new THREE.Vector2(17, -44) },
     checkpoints: {
-      'staff-training': v3(0, 0, 13),
+      'staff-training': v3(0, 0, 12),
       extortioners: v3(0, 0, -40),
     },
     update(dt, t) {

@@ -27,9 +27,9 @@ export interface Look {
 
 export const LOOKS: Record<string, Look> = {
   /* Designs from the ATHAR concept sheets (art/concepts). */
-  traveler: { robe: '#d4c6a8', robeStripe: '#cbbd9e', cloak: '#6e5340', turban: '#cbbd9f', skin: '#a87a55', beard: '#231a14', sash: '#5a3a24', beardLength: 'short', cloakLength: 0.85, fringe: true, satchel: true },
-  steadfast: { robe: '#5f6878', robeStripe: '#58616f', cloak: '#4a3a2d', turban: '#d3c7ae', skin: '#9c7152', beard: '#2a2420', sash: '#8a7357', beardLength: 'full', cloakLength: 1, fringe: true },
-  elder: { robe: '#d8cdb6', robeStripe: '#cfc3aa', cloak: '#8a4d32', turban: '#d6c9ad', skin: '#a3765a', beard: '#8f8a84', sash: '#d8cdb6', beardLength: 'long', cloakLength: 0.62, fringe: true, staff: true },
+  traveler: { robe: '#d4c6a8', robeStripe: '#cbbd9e', cloak: '#6e5340', turban: '#b5a789', skin: '#a87a55', beard: '#231a14', sash: '#5a3a24', beardLength: 'short', cloakLength: 0.85, fringe: true, satchel: true },
+  steadfast: { robe: '#5f6878', robeStripe: '#58616f', cloak: '#4a3a2d', turban: '#bcb098', skin: '#9c7152', beard: '#2a2420', sash: '#8a7357', beardLength: 'full', cloakLength: 1, fringe: true },
+  elder: { robe: '#d8cdb6', robeStripe: '#cfc3aa', cloak: '#8a4d32', turban: '#bfb296', skin: '#a3765a', beard: '#8f8a84', sash: '#d8cdb6', beardLength: 'long', cloakLength: 0.62, fringe: true, staff: true },
   abuDharr: { robe: '#b9a47f', robeStripe: '#ad9873', cloak: '#6b4a2e', turban: '#d6cbb3', skin: '#b98a63', beard: '#2b211b' },
   guide: { robe: '#3a4a6b', robeStripe: '#33425f', cloak: '#26324a', turban: '#d9cfb8', skin: '#a47a56', beard: '#5a5550' },
   wayfarer: { robe: '#8b6d4a', robeStripe: '#7e6242', cloak: '#4f3b28', turban: '#a3927a', skin: '#9b7150', beard: '#3b3029' },
