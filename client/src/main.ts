@@ -9,7 +9,7 @@ import { getLang, initialLang, setLang, t } from './i18n';
 import { api } from './net/api';
 import { PartyDriver, SoloDriver } from './net/driver';
 import { Realtime } from './net/realtime';
-import type { ApiError } from './net/api';
+import { OFFLINE, type ApiError } from './net/api';
 import { esc, hideScreen, showScreen, toast } from './ui/ui';
 
 const canvas = document.getElementById('game') as HTMLCanvasElement;
@@ -20,7 +20,7 @@ let session: GameSession | null = null;
 let realtime: Realtime | null = null;
 let me: { id: string; displayName: string; characterId: string | null } = { id: '', displayName: '', characterId: null };
 
-const portrait = (id: string) => `/portraits/${id}.jpg`;
+const portrait = (id: string) => `${import.meta.env.BASE_URL}portraits/${id}.jpg`;
 const charName = (id: string) => t(`char_${id}` as 'char_traveler');
 
 // ---------------------------------------------------------------- cinematic backdrop
@@ -131,7 +131,7 @@ function home() {
       <p class="subtitle">${esc(t('subtitle'))}</p>
       <div class="menu">
         <button class="btn btn-primary" data-go="play">${esc(t('play'))}</button>
-        <button class="btn" data-go="party">${esc(t('playTogether'))}</button>
+        ${OFFLINE ? '' : `<button class="btn" data-go="party">${esc(t('playTogether'))}</button>`}
         <button class="btn" data-go="chapters">${esc(t('chapters'))}</button>
         <button class="btn" data-go="achievements">${esc(t('achievements'))}</button>
         <button class="btn" data-go="journal">${esc(t('journal'))}</button>

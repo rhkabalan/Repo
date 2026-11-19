@@ -46,8 +46,8 @@ const USER_COLUMNS = 'id, display_name, avatar_url, is_guest, character_id, crea
 
 export const randomGuestName = () => `Player${randomInt(1000, 10000)}`;
 
-/** Level curve: level n needs 100 * n^2 total XP (L1 at 0, L2 at 100, L3 at 400...). */
-export const levelForXp = (xp: number) => Math.floor(Math.sqrt(Math.max(0, xp) / 100)) + 1;
+import { levelForXp } from '../lib/levels.js';
+export { levelForXp };
 
 export async function createUser(
   db: Queryable,

@@ -16,6 +16,8 @@ export interface ApiError {
 
 const STORE_KEY = 'athar.session';
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? '';
+/** Offline single-player build: requests are answered in the browser (see offline.ts). */
+export const OFFLINE = import.meta.env.VITE_OFFLINE === '1';
 
 function loadTokens(): Tokens | null {
   try {
@@ -100,6 +102,10 @@ export class Api {
   }
 
   async request<T>(method: string, path: string, body?: unknown, auth = true): Promise<T> {
+    if (OFFLINE) {
+      const { offlineRequest } = await import('./offline');
+      return (await offlineRequest(method, path, body, this.lang)) as T;
+    }
     const sep = path.includes('?') ? '&' : '?';
     const url = `${API_BASE}${path}${sep}lang=${this.lang}`;
     const doFetch = () =>
