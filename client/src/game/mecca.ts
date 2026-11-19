@@ -2,14 +2,15 @@ import * as THREE from 'three';
 import { cloth, plaster, sand, stoneBlocks, wood } from './textures';
 
 /**
- * Mecca chapter environment: Hospitality Lane → passage gate → Meeting Courtyard.
+ * Mecca adventure district: Training Yard → Market Lane (side alley → Back Alley →
+ * Collapsed Passage) → the plaza held by extortioners → Meeting Courtyard.
  * These are gameplay spaces, not reconstructions of specific historical locations.
  * The Kaaba is intentionally not modelled here; it needs dedicated, reviewed treatment.
  */
 
 export interface Interactable {
   id: string;
-  kind: 'npc' | 'discovery' | 'well' | 'traveler' | 'board' | 'gate' | 'lectern';
+  kind: 'trainer' | 'rest' | 'merchant' | 'traveler' | 'lever' | 'sideDoor' | 'discovery';
   areaId: string;
   position: THREE.Vector3;
   radius: number;
@@ -22,13 +23,36 @@ export interface Collider {
   id?: string;
 }
 
+export interface EnemySpawn {
+  encounterId: string;
+  position: THREE.Vector3;
+  facing: number;
+  scan?: number;
+}
+
 export interface Environment {
   group: THREE.Group;
   interactables: Interactable[];
   colliders: Collider[];
   spawn: THREE.Vector3;
   areaAt(p: THREE.Vector3): string;
+  /** Opens the courtyard gates (obstacle resolved). */
   openGate(): void;
+  /** Opens the locked side door in the gate wall (other route). */
+  openSideDoor(): void;
+  /** Raises the counterweight gate in the back alley (puzzle solved). */
+  raiseBackGate(): void;
+  /** Where each collectible from the content catalog sits in the world. */
+  pickups: Record<string, THREE.Vector3>;
+  enemies: EnemySpawn[];
+  puzzle: { origin: THREE.Vector2; cell: number; cols: number; rows: number; crates: [number, number][]; plates: [number, number][] };
+  /** Reaching this zone unseen counts as sneaking past the extortioners. */
+  sneakGoal: { min: THREE.Vector2; max: THREE.Vector2 };
+  /** Passing through the side door counts as the other route. */
+  routeGoal: { min: THREE.Vector2; max: THREE.Vector2 };
+  /** Area where the extortioner encounter takes place. */
+  obstacleZone: { min: THREE.Vector2; max: THREE.Vector2 };
+  checkpoints: Record<string, THREE.Vector3>;
   update(dt: number, t: number): void;
 }
 
@@ -80,9 +104,21 @@ export function buildMecca(): Environment {
   const pathTex = stoneBlocks(9).clone();
   pathTex.needsUpdate = true;
   pathTex.repeat.set(2, 16);
-  const path = new THREE.Mesh(new THREE.PlaneGeometry(6, 58), new THREE.MeshStandardMaterial({ map: pathTex, color: '#b99a74', roughness: 0.95 }));
+  pathTex.repeat.set(2, 20);
+  const path = new THREE.Mesh(new THREE.PlaneGeometry(6, 62), new THREE.MeshStandardMaterial({ map: pathTex, color: '#b99a74', roughness: 0.95 }));
   path.rotation.x = -Math.PI / 2;
-  path.position.set(0, 0.03, -28);
+  path.position.set(0, 0.03, -27);
+  // Training yard and back alley floors.
+  for (const [x, z, w, d, rep] of [[0, 9.5, 19, 14, 6], [13.5, -31, 6, 50, 14], [7, -26.2, 7, 6, 3], [0, -52.7, 32, 10, 8]] as const) {
+    const t = stoneBlocks(11).clone();
+    t.needsUpdate = true;
+    t.repeat.set(w / 3, rep);
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(w, d), new THREE.MeshStandardMaterial({ map: t, color: '#c4a37c', roughness: 0.95 }));
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.set(x, 0.035, z);
+    floor.receiveShadow = true;
+    g.add(floor);
+  }
   path.receiveShadow = true;
   g.add(path);
 
@@ -205,20 +241,51 @@ export function buildMecca(): Environment {
     [9, 7, 7, { awning: '#7a2f45' }],
     [8, 6, 6, {}],
   ];
-  for (const [w, d, h, opts] of rightRow) {
-    house(laneHalf + d / 2, z - w / 2, w, d, h, 'right', opts);
+  rightRow.forEach(([w, d, h, opts], i) => {
+    // The 4th plot is the side alley into the back streets.
+    if (i !== 3) house(laneHalf + d / 2, z - w / 2, w, d, h, 'right', opts);
     z -= w + 0.4;
-  }
+  });
 
-  // Back wall behind the start.
   const wallMat = new THREE.MeshStandardMaterial({ map: (() => { const t = stoneTex.clone(); t.needsUpdate = true; t.repeat.set(4, 1); return t; })(), roughness: 1 });
-  // Open approach behind the start so the camera has room; low wall further back.
-  const startWall = box(16, 2.2, 1, wallMat);
-  startWall.position.set(0, 1.1, 14);
-  g.add(shadowed(startWall));
-  block(0, 14, 16, 1);
-  block(-10, 9, 12, 10);
-  block(10, 9, 12, 10);
+  // ---------- Training yard (start) ----------
+  const yardWall = (x: number, z: number, w: number, d: number, h = 2.6) => {
+    const m = box(w, h, d, wallMat);
+    m.position.set(x, h / 2, z);
+    g.add(shadowed(m));
+    block(x, z, w, d);
+  };
+  yardWall(0, 17, 21, 1);
+  yardWall(-10, 9.5, 1, 16);
+  yardWall(10, 9.5, 1, 16);
+  yardWall(-6.8, 2.4, 6.4, 1, 2.2);
+  yardWall(6.8, 2.4, 6.4, 1, 2.2);
+  // Sparring posts and a weapons rack.
+  for (const [x, zz] of [[-6, 13], [6, 13], [-6.5, 6]] as const) {
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.16, 1.7, 10), new THREE.MeshStandardMaterial({ map: wood(), roughness: 0.9 }));
+    post.position.set(x, 0.85, zz);
+    g.add(shadowed(post));
+    const wrap = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.5, 10), new THREE.MeshStandardMaterial({ map: cloth('#9a8466', '#8a7458') }));
+    wrap.position.set(x, 1.2, zz);
+    g.add(shadowed(wrap));
+    block(x, zz, 0.4, 0.4);
+  }
+  const rack = box(1.8, 1.2, 0.3, new THREE.MeshStandardMaterial({ map: wood(), roughness: 0.9 }));
+  rack.position.set(-9.2, 0.6, 12);
+  rack.rotation.y = Math.PI / 2;
+  g.add(shadowed(rack));
+  // Rest point: a bench and lantern where upgrades are made.
+  const bench = box(1.8, 0.45, 0.6, new THREE.MeshStandardMaterial({ map: wood(), roughness: 0.9 }));
+  bench.position.set(7.8, 0.22, 6);
+  g.add(shadowed(bench));
+  block(7.8, 6, 1.8, 0.6);
+  const fire = new THREE.PointLight('#ffb35c', 5, 8, 1.6);
+  fire.position.set(7.8, 1.2, 7.2);
+  g.add(fire);
+  animated.push((_dt, t) => (fire.intensity = 4.5 + Math.sin(t * 11) * 0.6));
+  const embers = new THREE.Mesh(new THREE.ConeGeometry(0.25, 0.4, 8), new THREE.MeshStandardMaterial({ color: '#ff9a3d', emissive: '#ff7a1a', emissiveIntensity: 2.5 }));
+  embers.position.set(7.8, 0.2, 7.2);
+  g.add(embers);
 
   // ---------- Props along the lane ----------
   const potMat = new THREE.MeshStandardMaterial({ color: '#a8643c', roughness: 0.85 });
@@ -282,9 +349,21 @@ export function buildMecca(): Environment {
     const pier = box(2.2, 6.5, 2, gateStone);
     pier.position.set(side * 3.1, 3.25, 0);
     gate.add(pier);
-    const wall = box(14, 5.5, 1.4, gateStone);
-    wall.position.set(side * 11, 2.75, 0);
-    gate.add(wall);
+    if (side > 0) {
+      const wall = box(14, 5.5, 1.4, gateStone);
+      wall.position.set(11, 2.75, 0);
+      gate.add(wall);
+    } else {
+      // Left wall with a small doorway for the side door (x -10..-8).
+      for (const [cx, w] of [[-14.1, 8.2], [-6.1, 3.8]] as const) {
+        const seg = box(w, 5.5, 1.4, gateStone);
+        seg.position.set(cx, 2.75, 0);
+        gate.add(seg);
+      }
+      const over = box(2, 2.6, 1.4, gateStone);
+      over.position.set(-9, 4.2, 0);
+      gate.add(over);
+    }
   }
   const arch = new THREE.Mesh(new THREE.TorusGeometry(2.1, 0.55, 10, 24, Math.PI), gateStone);
   arch.position.set(0, 5.2, 0);
@@ -301,7 +380,7 @@ export function buildMecca(): Environment {
     gate.add(leaf);
     doors.push(leaf);
   }
-  // Symbol plinths (Sun, Shelter, Water) in front of the gate.
+  /* Symbol plinths removed in the adventure layout.
   const symbolColors = ['#ffcc55', '#d9a35f', '#5fb7d9'];
   const symbols: THREE.Mesh[] = [];
   [-2.2, 0, 2.2].forEach((sx, i) => {
@@ -317,11 +396,15 @@ export function buildMecca(): Environment {
     symbols.push(emblem);
   });
   animated.push((_dt, t) => symbols.forEach((s, i) => ((s.rotation.y = t * 0.8 + i), (s.position.y = 1.45 + Math.sin(t * 1.5 + i) * 0.06))));
+  */
   gate.position.z = gateZ;
   g.add(shadowed(gate));
   block(-3.1, gateZ, 2.2, 2);
   block(3.1, gateZ, 2.2, 2);
-  block(-11, gateZ, 14, 1.4);
+  // Left wall split around a small locked side door (x -10..-8).
+  block(-14.1, gateZ, 8.2, 1.4);
+  block(-6.1, gateZ, 3.8, 1.4);
+  block(-9, gateZ, 2, 1.4, 'side-door');
   block(11, gateZ, 14, 1.4);
   block(0, gateZ, 4, 0.6, 'gate');
   let gateOpen = 0;
@@ -332,7 +415,18 @@ export function buildMecca(): Environment {
     doors[1]!.rotation.y = -gateOpen * 1.6;
   });
 
-  // Route board near the gate.
+  // Side door (other route).
+  const sideDoor = box(1.8, 2.6, 0.2, doorMat);
+  sideDoor.geometry.translate(0.9, 0, 0);
+  sideDoor.position.set(-9.9, 1.3, gateZ + 0.75);
+  g.add(shadowed(sideDoor));
+  let sideOpen = 0;
+  let sideTarget = 0;
+  animated.push((dt) => {
+    sideOpen += (sideTarget - sideOpen) * Math.min(1, dt * 2);
+    sideDoor.rotation.y = -sideOpen * 1.7;
+  });
+  /* Route board removed in the adventure layout.
   const board = new THREE.Group();
   const boardPost = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 2.2), doorMat);
   boardPost.position.y = 1.1;
@@ -343,6 +437,7 @@ export function buildMecca(): Environment {
   board.position.set(2.9, 0, -48);
   board.rotation.y = -Math.PI / 2.4;
   g.add(shadowed(board));
+  */
 
   // ---------- Meeting Courtyard ----------
   const cz = -80;
@@ -391,9 +486,56 @@ export function buildMecca(): Environment {
   palm(11, cz - 12, 6.5);
   palm(6.5, -30, 6);
 
-  // Lane edges / outer bounds
-  block(-30, -28, 40, 70);
-  block(30, -28, 40, 70);
+  // ---------- Back alley ----------
+  yardWall(17, -31, 1, 51, 4);
+  yardWall(13.8, -5.8, 6.4, 1, 4);
+  // North of the back alley (behind the first houses) is solid.
+  block(13.8, -1.5, 6.4, 8);
+  // Collapsed passage: rubble walls either side of a counterweight gate at z = -39.5.
+  const backGate = box(5.6, 3.2, 0.3, doorMat);
+  backGate.position.set(13.7, 1.6, -39.5);
+  g.add(shadowed(backGate));
+  block(13.7, -39.5, 6.4, 0.6, 'back-gate');
+  for (const [x, zz] of [[11.2, -40.3], [16.2, -40.6], [12.4, -41.4]] as const) {
+    const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.6 + r() * 0.3), gateStone);
+    rock.position.set(x, 0.4, zz);
+    rock.rotation.set(r(), r(), r());
+    g.add(shadowed(rock));
+  }
+  let backRaise = 0;
+  let backTarget = 0;
+  animated.push((dt) => {
+    backRaise += (backTarget - backRaise) * Math.min(1, dt * 1.2);
+    backGate.position.y = 1.6 + backRaise * 3.2;
+  });
+  const lever = new THREE.Group();
+  const leverBase = box(0.5, 0.3, 0.5, gateStone);
+  const leverArm = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1, 6), doorMat);
+  leverArm.position.y = 0.5;
+  leverArm.rotation.z = 0.4;
+  lever.add(leverBase, leverArm);
+  lever.position.set(11.2, 0.15, -29.4);
+  g.add(shadowed(lever));
+
+  // Cover along the gate wall: crate stacks that block the gang's line of sight, so the
+  // back-passage exit offers a real sneaking route (move while the lookout looks away).
+  for (const [x, zz, w] of [[10.2, -55.3, 1.8], [7.4, -55.1, 1.6], [4.9, -55.5, 1.6]] as const) {
+    const stack = new THREE.Group();
+    const crateMat2 = new THREE.MeshStandardMaterial({ map: wood(), color: '#a98458', roughness: 0.9 });
+    const c1 = box(w, 0.95, 0.9, crateMat2);
+    c1.position.y = 0.48;
+    const c2 = box(w * 0.55, 0.7, 0.8, crateMat2);
+    c2.position.set(w * 0.18, 1.3, 0);
+    c2.rotation.y = 0.2;
+    stack.add(c1, c2);
+    stack.position.set(x, 0, zz);
+    g.add(shadowed(stack));
+    block(x, zz, w, 0.9);
+  }
+
+  // Outer bounds
+  block(-30, -28, 38, 72);
+  block(36, -28, 38, 72);
   block(-50, -80, 64, 60);
   block(50, -80, 64, 60);
   block(0, -101, 60, 2);
@@ -452,21 +594,20 @@ export function buildMecca(): Environment {
     }
     interactables.push(it);
   };
-  add({ id: 'guide', kind: 'npc', areaId: 'hospitality-lane', position: v3(1.6, 0, -7), radius: 2.2 });
-  add({ id: 'traveler', kind: 'traveler', areaId: 'hospitality-lane', position: v3(-2.6, 0, -15.5), radius: 2.2 });
-  add({ id: 'ali-hospitality', kind: 'discovery', areaId: 'hospitality-lane', position: v3(-2.4, 0, -18.3), radius: 2 }, '#ffd27a');
-  add({ id: 'well', kind: 'well', areaId: 'hospitality-lane', position: v3(2.4, 0, -34.6), radius: 2.2 });
-  add({ id: 'route-board', kind: 'board', areaId: 'hospitality-lane', position: v3(2.4, 0, -48), radius: 2 });
-  add({ id: 'passage', kind: 'gate', areaId: 'hospitality-lane', position: v3(0, 0, -54.5), radius: 2.6 }, '#9fd6ff');
-  add({ id: 'public-declaration', kind: 'discovery', areaId: 'meeting-courtyard', position: v3(0, 0, -93), radius: 2.2 }, '#ffd27a');
-  add({ id: 'story-order', kind: 'lectern', areaId: 'meeting-courtyard', position: v3(7, 0, -78), radius: 2.2 }, '#c7a6ff');
+  add({ id: 'trainer', kind: 'trainer', areaId: 'training-yard', position: v3(-4.5, 0, 11), radius: 2.4 });
+  add({ id: 'rest', kind: 'rest', areaId: 'training-yard', position: v3(7.8, 0, 6.8), radius: 2.2 }, '#ffb347');
+  add({ id: 'traveler', kind: 'traveler', areaId: 'market-lane', position: v3(-2.6, 0, -15.5), radius: 2.2 });
+  add({ id: 'merchant', kind: 'merchant', areaId: 'market-lane', position: v3(-2.7, 0, -31), radius: 2.2 });
+  add({ id: 'lever', kind: 'lever', areaId: 'back-alley', position: v3(11.2, 0, -29.4), radius: 1.8 });
+  add({ id: 'side-door', kind: 'sideDoor', areaId: 'market-lane', position: v3(-9, 0, -56.6), radius: 2 });
+  add({ id: 'arrival-hospitality', kind: 'discovery', areaId: 'meeting-courtyard', position: v3(0, 0, -93), radius: 2.4 }, '#ffd27a');
 
   // Stone tablet where the second account is read.
   const tablet = box(1.6, 2.2, 0.35, gateStone);
   tablet.position.set(0, 1.1, -95);
   g.add(shadowed(tablet));
   block(0, -95, 1.6, 0.5);
-  // Lectern
+  /* Lectern removed in the adventure layout.
   const lectern = new THREE.Group();
   const stand = box(0.5, 1.1, 0.5, doorMat);
   stand.position.y = 0.55;
@@ -476,6 +617,7 @@ export function buildMecca(): Environment {
   lectern.add(stand, top);
   lectern.position.set(7, 0, -79.5);
   g.add(shadowed(lectern));
+  */
 
   // ---------- Dust motes in the sunlight ----------
   const dustCount = 900;
@@ -498,16 +640,63 @@ export function buildMecca(): Environment {
     a.needsUpdate = true;
   });
 
+  const removeCollider = (id: string) => {
+    for (let i = colliders.length - 1; i >= 0; i--) if (colliders[i]!.id === id) colliders.splice(i, 1);
+  };
+
   return {
     group: g,
     interactables,
     colliders,
-    spawn: v3(0, 0, 3),
-    areaAt: (p) => (p.z < gateZ ? 'meeting-courtyard' : 'hospitality-lane'),
+    spawn: v3(0, 0, 14),
+    areaAt: (p) => {
+      if (p.z < gateZ - 0.8) return 'meeting-courtyard';
+      if (p.z > 2.9) return 'training-yard';
+      if (p.x > 10.6) return p.z < -39.5 ? 'back-route' : 'back-alley';
+      if (p.x > 3.6 && p.z < -22.8 && p.z > -29.6) return 'back-alley';
+      return 'market-lane';
+    },
     openGate() {
       gateTarget = 1;
-      const i = colliders.findIndex((c) => c.id === 'gate');
-      if (i >= 0) colliders.splice(i, 1);
+      removeCollider('gate');
+    },
+    openSideDoor() {
+      sideTarget = 1;
+      removeCollider('side-door');
+    },
+    raiseBackGate() {
+      backTarget = 1;
+      removeCollider('back-gate');
+    },
+    pickups: {
+      'water-3': v3(-8.6, 0, 15.6),
+      'wood-2': v3(8.8, 0, 15.8),
+      'water-1': v3(-2.9, 0, -8.5),
+      'provisions-1': v3(2.9, 0, -20.5),
+      'rope-1': v3(-2.9, 0, -38.5),
+      'fragment-1': v3(2.6, 0, -4),
+      'merchant-bundle': v3(15.8, 0, -8.5),
+      'water-2': v3(11.4, 0, -14),
+      'wood-1': v3(16, 0, -20),
+      'fragment-2': v3(11.6, 0, -24.5),
+      'provisions-2': v3(15.6, 0, -44),
+      'rope-2': v3(11.6, 0, -48.5),
+      'fragment-3': v3(15.4, 0, -52),
+    },
+    enemies: [
+      { encounterId: 'staff-training', position: v3(1.5, 0, 9), facing: Math.PI * 0.1 },
+      { encounterId: 'extortioners', position: v3(-2.2, 0, -51.2), facing: 0, scan: 0.35 },
+      { encounterId: 'extortioners', position: v3(0.6, 0, -50.4), facing: 0.15, scan: 0.25 },
+      // The lookout keeps turning toward the back streets.
+      { encounterId: 'extortioners', position: v3(3.2, 0, -51.6), facing: Math.PI * 0.5, scan: 0.7 },
+    ],
+    puzzle: { origin: new THREE.Vector2(11.65, -30.8), cell: 1.3, cols: 4, rows: 6, crates: [[1, 1], [2, 2]], plates: [[0, 5], [3, 5]] },
+    sneakGoal: { min: new THREE.Vector2(-3.6, -57.6), max: new THREE.Vector2(3.6, -55.4) },
+    routeGoal: { min: new THREE.Vector2(-10.4, -61), max: new THREE.Vector2(-7.6, -58.9) },
+    obstacleZone: { min: new THREE.Vector2(-10.5, -58), max: new THREE.Vector2(17, -44) },
+    checkpoints: {
+      'staff-training': v3(0, 0, 13),
+      extortioners: v3(0, 0, -40),
     },
     update(dt, t) {
       for (const fn of animated) fn(dt, t);

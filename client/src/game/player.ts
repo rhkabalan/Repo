@@ -15,6 +15,12 @@ export class PlayerController {
   private readonly camPos = new THREE.Vector3();
   private readonly lookAt = new THREE.Vector3();
   moving = false;
+  /** Multiplies movement speed (attacking, blocking, sneaking slow you down). */
+  speedScale = 1;
+  /** When false the player keeps its facing (e.g. mid-swing). */
+  canTurn = true;
+  /** Set to drive the animation yourself (combat states). */
+  animOverride: import('./character').Anim | null = null;
 
   constructor(
     readonly character: Character,
@@ -69,7 +75,7 @@ export class PlayerController {
         dir.set(0, 0, 0);
       } else dir.normalize();
     }
-    const speed = this.controls.running ? RUN : WALK;
+    const speed = (this.controls.running ? RUN : WALK) * this.speedScale;
     const target = dir.multiplyScalar(speed * Math.max(input.length(), dir.lengthSq() > 0 ? 1 : 0));
     this.velocity.lerp(target, Math.min(1, dt * 10));
     const next = this.position.clone().addScaledVector(this.velocity, dt);
@@ -77,19 +83,49 @@ export class PlayerController {
     this.position.copy(next);
 
     this.moving = this.velocity.lengthSq() > 0.05;
-    if (this.moving) {
+    if (this.moving && this.canTurn) {
       const yaw = Math.atan2(this.velocity.x, this.velocity.z);
       const cur = this.character.root.rotation.y;
       const delta = Math.atan2(Math.sin(yaw - cur), Math.cos(yaw - cur));
       this.character.root.rotation.y = cur + delta * Math.min(1, dt * 12);
     }
-    if (!this.character.carrying || this.character.anim !== 'carry') {
-      this.character.setAnim(this.moving ? (this.controls.running ? 'run' : 'walk') : this.character.anim === 'talk' ? 'talk' : 'idle');
+    if (this.animOverride) this.character.setAnim(this.animOverride);
+    else if (!this.character.carrying || this.character.anim !== 'carry') {
+      this.character.setAnim(this.moving ? (this.controls.running ? 'run' : 'walk') : 'idle');
     }
     this.updateCamera(dt);
   }
 
   /** Camera boom: shortened when a wall stands between the player and the camera. */
+  /** Move by an offset (dodge roll, knockback) with collisions. */
+  push(offset: THREE.Vector3) {
+    if (offset.lengthSq() === 0) return;
+    const next = this.position.clone().add(offset);
+    this.collide(next);
+    this.position.copy(next);
+  }
+
+  /** Unit vector the character is facing. */
+  facing(out = new THREE.Vector3()) {
+    const y = this.character.root.rotation.y;
+    return out.set(Math.sin(y), 0, Math.cos(y));
+  }
+
+  /** Face a direction immediately (e.g. turn toward the nearest opponent when swinging). */
+  faceTowards(dir: THREE.Vector3) {
+    if (dir.lengthSq() < 1e-4) return;
+    this.character.root.rotation.y = Math.atan2(dir.x, dir.z);
+  }
+
+  /** Camera-relative input direction in world space (zero when idle). */
+  inputDirection(out = new THREE.Vector3()) {
+    const input = this.controls.move;
+    if (input.lengthSq() < 0.01) return out.set(0, 0, 0);
+    const fwd = new THREE.Vector3(-Math.sin(this.camYaw), 0, -Math.cos(this.camYaw));
+    const right = new THREE.Vector3(-fwd.z, 0, fwd.x);
+    return out.copy(fwd.multiplyScalar(input.y)).addScaledVector(right, input.x).normalize();
+  }
+
   private desiredCamera(out: THREE.Vector3) {
     const maxDist = 7.5;
     const sx = Math.sin(this.camYaw);

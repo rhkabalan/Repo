@@ -1,14 +1,30 @@
 import * as THREE from 'three';
 
-/** Unified input: keyboard, on-screen joystick + buttons (touch), and tap-to-walk. */
+type Action = 'attack' | 'dodge' | 'interact' | 'sneak';
+
+/**
+ * Unified input for action play.
+ * Keyboard: WASD/arrows move, Shift run, J or left click attack, K or right click block (hold),
+ * Space dodge, C sneak (toggle), E interact.
+ * Touch: joystick (push fully to run), Attack, Block (hold), Dodge, Sneak, and the context
+ * prompt chip to interact. Tap the ground to walk there when not in combat.
+ */
 export class Controls {
   readonly move = new THREE.Vector2(); // x = right, y = forward, length ≤ 1
   running = false;
+  blocking = false;
+  sneaking = false;
   tapTarget: THREE.Vector3 | null = null;
+  enabled = true;
+  /** Disable tap-to-walk while fighting so taps don't fight the joystick. */
+  allowTapMove = true;
   private keys = new Set<string>();
   private joy = new THREE.Vector2();
-  private interactHandlers: (() => void)[] = [];
-  enabled = true;
+  private touchBlock = false;
+  private mouseBlock = false;
+  private handlers = new Map<Action, (() => void)[]>();
+  private raycaster = new THREE.Raycaster();
+  dispose: () => void;
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
@@ -16,36 +32,72 @@ export class Controls {
     private readonly ground: THREE.Object3D,
     hud: HTMLElement,
   ) {
+    const typing = (e: Event) => !!(e.target as HTMLElement).closest?.('input, textarea, button, [role="dialog"]');
     const down = (e: KeyboardEvent) => {
-      if ((e.target as HTMLElement).closest?.('input, textarea, button')) return;
+      if (typing(e)) return;
       this.keys.add(e.code);
-      if ((e.code === 'KeyE' || e.code === 'Enter' || e.code === 'Space') && !e.repeat) this.fireInteract();
+      if (e.repeat) return;
+      if (e.code === 'KeyE' || e.code === 'Enter') this.fire('interact');
+      if (e.code === 'KeyJ') this.fire('attack');
+      if (e.code === 'Space') {
+        e.preventDefault();
+        this.fire('dodge');
+      }
+      if (e.code === 'KeyC') this.toggleSneak();
     };
     const up = (e: KeyboardEvent) => this.keys.delete(e.code);
-    const blur = () => this.keys.clear();
-    const tap = (e: PointerEvent) => this.onTap(e);
+    const blur = () => {
+      this.keys.clear();
+      this.mouseBlock = this.touchBlock = false;
+    };
+    const mouseDown = (e: PointerEvent) => {
+      if (e.pointerType !== 'mouse') return;
+      if (e.button === 0) this.fire('attack');
+      if (e.button === 2) this.mouseBlock = true;
+    };
+    const mouseUp = (e: PointerEvent) => {
+      if (e.pointerType === 'mouse' && e.button === 2) this.mouseBlock = false;
+      if (e.pointerType !== 'mouse') this.onTap(e);
+    };
+    const noMenu = (e: Event) => e.preventDefault();
     addEventListener('keydown', down);
     addEventListener('keyup', up);
     addEventListener('blur', blur);
-    this.canvas.addEventListener('pointerup', tap);
+    canvas.addEventListener('pointerdown', mouseDown);
+    canvas.addEventListener('pointerup', mouseUp);
+    canvas.addEventListener('contextmenu', noMenu);
     this.dispose = () => {
       removeEventListener('keydown', down);
       removeEventListener('keyup', up);
       removeEventListener('blur', blur);
-      this.canvas.removeEventListener('pointerup', tap);
+      canvas.removeEventListener('pointerdown', mouseDown);
+      canvas.removeEventListener('pointerup', mouseUp);
+      canvas.removeEventListener('contextmenu', noMenu);
     };
     this.buildTouchUi(hud);
   }
 
-  dispose: () => void;
+  on(action: Action, fn: () => void) {
+    this.handlers.set(action, [...(this.handlers.get(action) ?? []), fn]);
+  }
 
+  /** Back-compat for callers that only need interaction. */
   onInteract(fn: () => void) {
-    this.interactHandlers.push(fn);
+    this.on('interact', fn);
   }
 
-  private fireInteract() {
-    if (this.enabled) for (const fn of this.interactHandlers) fn();
+  fire(action: Action) {
+    if (!this.enabled) return;
+    for (const fn of this.handlers.get(action) ?? []) fn();
   }
+
+  private toggleSneak() {
+    this.sneaking = !this.sneaking;
+    this.sneakBtn?.classList.toggle('active', this.sneaking);
+    this.fire('sneak');
+  }
+
+  private sneakBtn: HTMLElement | null = null;
 
   private buildTouchUi(hud: HTMLElement) {
     const pad = document.createElement('div');
@@ -80,26 +132,40 @@ export class Controls {
     pad.addEventListener('pointerup', end);
     pad.addEventListener('pointercancel', end);
 
-    const buttons = document.createElement('div');
-    buttons.className = 'action-buttons';
-    buttons.innerHTML = '<button class="btn-run" data-i18n="run"></button><button class="btn-interact" data-i18n="interact"></button>';
-    hud.appendChild(buttons);
-    const run = buttons.querySelector('.btn-run') as HTMLElement;
-    run.addEventListener('pointerdown', () => {
-      this.touchRun = !this.touchRun;
-      run.classList.toggle('active', this.touchRun);
-    });
-    buttons.querySelector('.btn-interact')!.addEventListener('pointerdown', (e) => {
+    const cluster = document.createElement('div');
+    cluster.className = 'action-cluster';
+    cluster.innerHTML = `
+      <button class="act act-attack" data-i18n="attack"></button>
+      <button class="act act-block" data-i18n="block"></button>
+      <button class="act act-dodge" data-i18n="dodge"></button>
+      <button class="act act-sneak" data-i18n="sneak"></button>`;
+    hud.appendChild(cluster);
+    const press = (sel: string, fn: () => void) =>
+      cluster.querySelector(sel)!.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        fn();
+      });
+    press('.act-attack', () => this.fire('attack'));
+    press('.act-dodge', () => this.fire('dodge'));
+    press('.act-sneak', () => this.toggleSneak());
+    this.sneakBtn = cluster.querySelector('.act-sneak');
+    const block = cluster.querySelector('.act-block') as HTMLElement;
+    block.addEventListener('pointerdown', (e) => {
       e.preventDefault();
-      this.fireInteract();
+      block.setPointerCapture(e.pointerId);
+      this.touchBlock = true;
+      block.classList.add('active');
     });
+    const release = () => {
+      this.touchBlock = false;
+      block.classList.remove('active');
+    };
+    block.addEventListener('pointerup', release);
+    block.addEventListener('pointercancel', release);
   }
 
-  private touchRun = false;
-  private raycaster = new THREE.Raycaster();
-
   private onTap(e: PointerEvent) {
-    if (!this.enabled || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    if (!this.enabled || !this.allowTapMove) return;
     const r = this.canvas.getBoundingClientRect();
     const ndc = new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     this.raycaster.setFromCamera(ndc, this.camera);
@@ -115,6 +181,8 @@ export class Controls {
     if (this.move.length() > 1) this.move.normalize();
     if (!this.enabled) this.move.set(0, 0);
     if (this.move.lengthSq() > 0.01) this.tapTarget = null;
-    this.running = k.has('ShiftLeft') || k.has('ShiftRight') || this.touchRun;
+    const joyRun = this.joy.length() > 0.92;
+    this.running = (k.has('ShiftLeft') || k.has('ShiftRight') || joyRun) && !this.sneaking;
+    this.blocking = this.enabled && (k.has('KeyK') || this.touchBlock || this.mouseBlock);
   }
 }

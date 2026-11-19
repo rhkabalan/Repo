@@ -218,6 +218,7 @@ async function journal() {
   const entries = [
     ...j.journal.accounts.map((a: any) => `<div class="journal-entry"><h3>${esc(a.title)}</h3><span class="certainty ${a.certainty}">${esc(t(`certainty_${a.certainty}` as 'certainty_sourced'))}</span><p>${esc(a.body)}</p></div>`),
     ...j.journal.reflections.map((r: any) => `<div class="journal-entry"><p><i>${esc(r.text)}</i></p></div>`),
+    ...(j.journal.fragments ?? []).map((f: any) => `<div class="journal-entry"><h3>📜 ${esc(f.title)}</h3><span class="certainty ${f.certainty}">${esc(t(`certainty_${f.certainty}` as 'certainty_fictional'))}</span><p>${esc(f.text)}</p></div>`),
   ];
   const el = showScreen(`
     <div class="sheet">

@@ -8,6 +8,8 @@ export interface RunState {
   tasks: Record<string, number>;
   openAreas: string[];
   choices: Record<string, string>;
+  collectibles: string[];
+  encounters: Record<string, 'fight' | 'sneak' | 'route'>;
   completed: boolean;
 }
 
@@ -16,9 +18,15 @@ export type Action =
   | { type: 'puzzle.attempt'; puzzleId: string; answer: string[] }
   | { type: 'task.progress'; taskId: string; amount: number }
   | { type: 'choice.make'; choiceId: string; optionId: string }
-  | { type: 'mission.complete' };
+  | { type: 'mission.complete' }
+  | { type: 'item.collect'; collectibleId: string }
+  | { type: 'encounter.resolve'; encounterId: string; method: 'fight' | 'sneak' | 'route' };
 
-export type Award = { type: 'xp'; amount: number; reason: string } | { type: 'badge'; badgeId: string; name?: string } | { type: 'chapter_unlocked'; chapterId: string };
+export type Award =
+  | { type: 'xp'; amount: number; reason: string }
+  | { type: 'badge'; badgeId: string; name?: string; category?: 'adventure' | 'history' }
+  | { type: 'chapter_unlocked'; chapterId: string }
+  | { type: 'item'; itemId: string; amount: number; name?: string };
 
 export type ActOutcome =
   | { ok: true; result: Record<string, any> }
@@ -49,7 +57,16 @@ export interface MissionDriver {
   dispose(): void;
 }
 
-const emptyRun = (): RunState => ({ discoveries: [], puzzles: {}, tasks: {}, openAreas: [], choices: {}, completed: false });
+const emptyRun = (): RunState => ({
+  discoveries: [],
+  puzzles: {},
+  tasks: {},
+  openAreas: [],
+  choices: {},
+  collectibles: [],
+  encounters: {},
+  completed: false,
+});
 
 /** Single player via the REST journey API. */
 export class SoloDriver implements MissionDriver {
@@ -76,6 +93,8 @@ export class SoloDriver implements MissionDriver {
       tasks: c.tasks,
       openAreas: c.openAreas,
       choices: c.choices,
+      collectibles: c.collectibles ?? [],
+      encounters: c.encounters ?? {},
       completed: c.status === 'completed',
     };
     this.earnedXp = c.earnedXp;
@@ -149,6 +168,8 @@ export class PartyDriver implements MissionDriver {
         tasks: s.tasks,
         openAreas: s.openAreas,
         choices: mine?.choices ?? {},
+        collectibles: s.collectibles ?? [],
+        encounters: s.encounters ?? {},
         completed: s.completed,
       };
       this.earnedXp = mine?.xpEarned ?? 0;

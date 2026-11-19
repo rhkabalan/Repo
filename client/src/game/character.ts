@@ -3,7 +3,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { cloth } from './textures';
 
-export type Anim = 'idle' | 'walk' | 'run' | 'talk' | 'carry' | 'interact' | 'sit';
+export type Anim = 'idle' | 'walk' | 'run' | 'talk' | 'carry' | 'interact' | 'sit' | 'attack' | 'block' | 'dodge' | 'crouch' | 'hit' | 'yield';
 
 export interface Look {
   robe: string;
@@ -268,6 +268,11 @@ export class Character {
       this.feet = bones.filter((b) => /foot|toe|ankle/i.test(b.name));
       if (this.feet.length === 0) this.feet = bones;
       this.restFootY = this.lowestFoot();
+      if (this.staff) {
+        this.staff.removeFromParent();
+        this.staff = null;
+        this.equipStaff();
+      }
       this.mixer = new THREE.AnimationMixer(model);
       for (const clip of animations) this.actions.set(clip.name.toLowerCase(), this.mixer.clipAction(clip));
       this.playClip(this.anim);
@@ -282,7 +287,23 @@ export class Character {
     const pick = (names: string[]) =>
       names.map((n) => this.actions.get(n) ?? [...this.actions].find(([k]) => k.includes(n))?.[1]).find(Boolean);
     const next =
-      pick({ walk: ['walk', 'walking'], run: ['run', 'running', 'walk'], idle: ['idle'], talk: ['talk', 'idle'], carry: ['carry', 'walk'], interact: ['interact', 'idle'], sit: ['sit', 'idle'] }[anim]) ??
+      pick(
+        {
+          walk: ['walk', 'walking'],
+          run: ['run', 'running', 'walk'],
+          idle: ['idle'],
+          talk: ['talk', 'idle'],
+          carry: ['carry', 'walk'],
+          interact: ['interact', 'idle'],
+          sit: ['sit', 'idle'],
+          attack: ['attack', 'idle'],
+          block: ['block', 'idle'],
+          dodge: ['dodge', 'run'],
+          crouch: ['crouch', 'sneak', 'walk'],
+          hit: ['hit', 'idle'],
+          yield: ['yield', 'kneel', 'idle'],
+        }[anim],
+      ) ??
       this.actions.values().next().value;
     if (!next || next === this.currentAction) return;
     next.reset().fadeIn(0.25).play();
@@ -332,6 +353,67 @@ export class Character {
   private restFootY = 0;
   private readonly tmp = new THREE.Vector3();
 
+  private overlay = 0;
+
+  /**
+   * Rigged models only have walk/idle/run clips so far: express combat states with a light
+   * whole-body pose on top (lean, crouch, kneel) until dedicated clips are generated.
+   */
+  private poseOverlay(dt: number) {
+    if (!this.model) return;
+    this.overlay += dt;
+    const targets: Partial<Record<Anim, [number, number, number]>> = {
+      // [lean forward, crouch scale, twist]
+      attack: [0.18, 1, Math.sin(this.overlay * 18) * 0.5],
+      block: [-0.08, 0.96, 0.25],
+      dodge: [0.35, 0.85, 0],
+      crouch: [0.25, 0.82, 0],
+      hit: [-0.25, 1, 0],
+      yield: [0.55, 0.7, 0],
+    };
+    const [lean, squash, twist] = targets[this.anim] ?? [0, 1, 0];
+    const k = Math.min(1, dt * 12);
+    this.model.rotation.x += (lean - this.model.rotation.x) * k;
+    this.model.rotation.y += (twist - this.model.rotation.y) * k;
+    const sy = this.model.scale.y / (this.model.scale.x || 1);
+    const ny = sy + (squash - sy) * k;
+    this.model.scale.y = this.model.scale.x * ny;
+  }
+
+  private staff: THREE.Object3D | null = null;
+
+  /** Give the character a walking staff (their weapon in training and encounters). */
+  equipStaff() {
+    if (this.staff) return;
+    const staff = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.022, 0.028, 1.7, 7),
+      new THREE.MeshStandardMaterial({ color: '#6a4a2c', roughness: 0.85 }),
+    );
+    staff.castShadow = true;
+    this.staff = staff;
+    const armR = this.parts.armR;
+    if (armR && !this.model) {
+      staff.position.set(0, -0.5, 0.05);
+      staff.rotation.x = Math.PI / 2.4;
+      armR.add(staff);
+      return;
+    }
+    let hand: THREE.Object3D | undefined;
+    this.model?.traverse((o) => {
+      if (!hand && (o as THREE.Bone).isBone && /right.?hand|hand.?r\b|hand_r/i.test(o.name)) hand = o;
+    });
+    if (hand) {
+      // Bones are in the model's (scaled) space; undo the scale so the staff stays 1.7m.
+      const s = 1 / (this.model!.scale.x || 1);
+      staff.scale.setScalar(s);
+      staff.rotation.x = Math.PI / 2;
+      hand.add(staff);
+    } else {
+      staff.position.set(0.35, 0.9, 0.2);
+      this.root.add(staff);
+    }
+  }
+
   /** Lowest foot bone height, in the character root's local space. */
   private lowestFoot(): number {
     this.root.updateMatrixWorld(true);
@@ -347,6 +429,7 @@ export class Character {
   update(dt: number) {
     if (this.mixer) {
       this.mixer.update(dt);
+      this.poseOverlay(dt);
       if (this.model && this.feet.length) {
         // Lift the body if an animation pushes the feet below where they rest.
         this.model.position.y = this.modelBaseY;
@@ -359,16 +442,47 @@ export class Character {
     this.phase += dt * speed;
     const p = this.phase;
     const { armL, armR, footL, footR, head } = this.parts;
-    const moving = this.anim === 'walk' || this.anim === 'run' || this.anim === 'carry';
+    const moving = this.anim === 'walk' || this.anim === 'run' || this.anim === 'carry' || this.anim === 'crouch';
     const swing = this.anim === 'run' ? 0.85 : 0.45;
 
     this.body.position.y = moving ? Math.abs(Math.sin(p)) * (this.anim === 'run' ? 0.07 : 0.035) : Math.sin(p) * 0.006;
     this.body.rotation.x = this.anim === 'run' ? 0.12 : 0;
+    if (this.anim === 'attack') this.phase += dt * 8; // swings are fast
     this.body.rotation.z = moving ? Math.sin(p) * 0.025 : 0;
 
     if (this.anim === 'sit') {
       this.body.position.y = -0.55;
       armL!.rotation.x = armR!.rotation.x = -0.6;
+    } else if (this.anim === 'attack') {
+      // Overhead-to-forward staff swing.
+      const t = (p * 0.9) % (Math.PI * 2);
+      armR!.rotation.x = -2.2 + Math.sin(t) * 1.4;
+      armR!.rotation.z = -0.3;
+      armL!.rotation.x = -0.9;
+      this.body.rotation.y = Math.sin(t) * 0.35;
+    } else if (this.anim === 'block') {
+      armL!.rotation.x = armR!.rotation.x = -1.5;
+      armL!.rotation.z = 0.5;
+      armR!.rotation.z = -0.5;
+      this.body.rotation.x = -0.05;
+    } else if (this.anim === 'dodge') {
+      this.body.rotation.x = 0.45;
+      this.body.position.y = -0.15;
+      armL!.rotation.x = armR!.rotation.x = 0.6;
+    } else if (this.anim === 'crouch') {
+      this.body.position.y = -0.22;
+      this.body.rotation.x = 0.3;
+      armL!.rotation.x = Math.sin(p) * 0.25 - 0.3;
+      armR!.rotation.x = -Math.sin(p) * 0.25 - 0.3;
+    } else if (this.anim === 'hit') {
+      this.body.rotation.x = -0.3;
+      armL!.rotation.x = armR!.rotation.x = -0.4;
+    } else if (this.anim === 'yield') {
+      // Kneel with the head bowed and the staff lowered: the opponent gives up.
+      this.body.position.y = -0.45;
+      this.body.rotation.x = 0.35;
+      armL!.rotation.x = armR!.rotation.x = 0.2;
+      head!.rotation.x = 0.5;
     } else if (this.anim === 'carry') {
       armL!.rotation.x = armR!.rotation.x = -1.1;
       armL!.rotation.z = 0.25;
@@ -392,5 +506,7 @@ export class Character {
     footL!.position.z = 0.05 + (moving ? Math.sin(p) * 0.16 : 0);
     footR!.position.z = 0.05 - (moving ? Math.sin(p) * 0.16 : 0);
     head!.rotation.y = this.anim === 'talk' ? Math.sin(p * 0.7) * 0.15 : Math.sin(p * 0.3) * 0.05;
+    if (this.anim !== 'yield') head!.rotation.x = 0;
+    if (this.anim !== 'attack') this.body.rotation.y = 0;
   }
 }

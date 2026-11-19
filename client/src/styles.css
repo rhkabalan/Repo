@@ -108,9 +108,9 @@ html[dir='rtl'] .hud-right { align-items: flex-start; }
 .joystick { position: absolute; bottom: calc(28px + env(safe-area-inset-bottom)); inset-inline-start: 28px; width: 130px; height: 130px; border-radius: 50%; background: radial-gradient(circle, rgba(255, 240, 215, 0.12), rgba(255, 240, 215, 0.04)); border: 1px solid var(--panel-edge); touch-action: none; }
 html[dir='rtl'] .joystick { inset-inline-start: auto; inset-inline-end: 28px; }
 .joystick-knob { position: absolute; left: 50%; top: 50%; width: 56px; height: 56px; margin: -28px 0 0 -28px; border-radius: 50%; background: linear-gradient(180deg, #f0cf8c, #c99a4b); box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4); }
-.action-buttons { position: absolute; bottom: calc(34px + env(safe-area-inset-bottom)); inset-inline-end: 24px; display: flex; gap: 12px; align-items: flex-end; }
-html[dir='rtl'] .action-buttons { inset-inline-end: auto; inset-inline-start: 24px; }
-.action-buttons button { font: inherit; border-radius: 50%; border: 1px solid var(--panel-edge); color: var(--ink); background: var(--panel); backdrop-filter: blur(10px); cursor: pointer; }
+.unused-action-buttons { position: absolute; bottom: calc(34px + env(safe-area-inset-bottom)); inset-inline-end: 24px; display: flex; gap: 12px; align-items: flex-end; }
+html[dir="rtl"] .unused-action-buttons { inset-inline-end: auto; inset-inline-start: 24px; }
+.unused-action-buttons button { font: inherit; border-radius: 50%; border: 1px solid var(--panel-edge); color: var(--ink); background: var(--panel); backdrop-filter: blur(10px); cursor: pointer; }
 .btn-run { width: 66px; height: 66px; font-size: 0.85rem; }
 .btn-run.active { background: rgba(143, 211, 255, 0.35); border-color: var(--accent); }
 .btn-interact { width: 88px; height: 88px; font-weight: 600; background: linear-gradient(180deg, #f0cf8c, #c99a4b) !important; color: #2a1a0c !important; }
@@ -193,3 +193,47 @@ html[dir='rtl'] .me-chip { padding: 6px 6px 6px 16px; }
   .char-card { display: grid; grid-template-columns: 96px 1fr; align-items: center; }
   .char-card img { height: 96px; }
 }
+
+/* ---------- Adventure HUD ---------- */
+.hud-left { display: grid; gap: 8px; max-width: min(460px, 64vw); }
+.vitals { display: grid; gap: 5px; width: min(240px, 52vw); }
+.bar { height: 9px; border-radius: 999px; background: rgba(20, 12, 6, 0.6); border: 1px solid var(--panel-edge); overflow: hidden; }
+.bar span { display: block; height: 100%; border-radius: inherit; transition: width 0.15s; }
+.bar-health span { background: linear-gradient(90deg, #d9734f, #f0a36b); }
+.bar-stamina span { background: linear-gradient(90deg, #c9a24d, #f0cf8c); }
+.vitals.hurt .bar-health { box-shadow: 0 0 0 2px rgba(255, 106, 61, 0.6); }
+.inv { display: flex; flex-wrap: wrap; gap: 6px; }
+.inv .chip, .inv.big .chip { background: var(--panel); border: 1px solid var(--panel-edge); border-radius: 999px; padding: 4px 10px; font-size: 0.9rem; backdrop-filter: blur(8px); font-variant-numeric: tabular-nums; }
+.inv .chip small { opacity: 0.6; margin-inline-start: 1px; }
+.inv.big { margin: 10px 0 14px; }
+.detect { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 150px); left: 50%; transform: translateX(-50%); width: 160px; height: 8px; border-radius: 999px; background: rgba(20, 12, 6, 0.6); border: 1px solid rgba(255, 106, 61, 0.5); overflow: hidden; }
+.detect span { display: block; height: 100%; background: linear-gradient(90deg, #ffd27a, #ff6a3d); }
+.detect[hidden] { display: none; }
+button.prompt-chip { border: 0; font: inherit; cursor: pointer; }
+
+.action-cluster { position: absolute; bottom: calc(26px + env(safe-area-inset-bottom)); inset-inline-end: 20px; width: 190px; height: 190px; }
+html[dir='rtl'] .action-cluster { inset-inline-end: auto; inset-inline-start: 20px; }
+.act { position: absolute; border-radius: 50%; border: 1px solid var(--panel-edge); color: var(--ink); background: var(--panel); backdrop-filter: blur(10px); font: inherit; font-size: 0.82rem; cursor: pointer; touch-action: none; }
+.act.active { background: rgba(143, 211, 255, 0.35); border-color: var(--accent); }
+.act-attack { width: 92px; height: 92px; right: 10px; bottom: 10px; font-weight: 600; background: linear-gradient(180deg, #f0cf8c, #c99a4b); color: #2a1a0c; }
+.act-block { width: 64px; height: 64px; right: 112px; bottom: 6px; }
+.act-dodge { width: 64px; height: 64px; right: 28px; bottom: 112px; }
+.act-sneak { width: 54px; height: 54px; right: 112px; bottom: 96px; font-size: 0.75rem; }
+html[dir='rtl'] .act-attack { right: auto; left: 10px; }
+html[dir='rtl'] .act-block { right: auto; left: 112px; }
+html[dir='rtl'] .act-dodge { right: auto; left: 28px; }
+html[dir='rtl'] .act-sneak { right: auto; left: 112px; }
+@media (pointer: fine) { .action-cluster { opacity: 0.55; } }
+
+.upgrades { display: grid; gap: 10px; }
+.upgrade { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; background: rgba(255, 240, 215, 0.05); border: 1px solid rgba(231, 194, 125, 0.18); }
+.upgrade small { color: var(--ink-dim); }
+.upgrade .lvl { color: var(--gold); letter-spacing: 0.1em; }
+.upgrade .btn { white-space: nowrap; min-height: 40px; padding: 0.5em 1em; }
+.controls-help { color: var(--ink-dim); font-size: 0.9rem; }
+
+/* Historical scenes are framed apart from the fictional adventure. */
+.panel.history { background: linear-gradient(180deg, rgba(58, 44, 28, 0.92), rgba(36, 26, 15, 0.94)); border: 1px solid rgba(239, 226, 194, 0.55); box-shadow: 0 0 0 6px rgba(239, 226, 194, 0.06), 0 30px 80px rgba(0, 0, 0, 0.55); }
+.panel.history .eyebrow { color: #efe2c2; }
+.panel.history h2 { color: #f3e6c4; }
+.history-text { font-size: 1.12rem; line-height: 1.95; }
