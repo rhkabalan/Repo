@@ -29,7 +29,7 @@ export class MatchService {
   ): Promise<MatchRecord> {
     const playerCount = results.length;
     const recorded = results.map((r) => ({ ...r, xp: Math.max(0, Math.round(game.xpFor(r, playerCount))) }));
-    const competitive = mode === 'multiplayer' && playerCount > 1;
+    const competitive = mode === 'multiplayer' && playerCount > 1 && !game.cooperative;
 
     const matchId = await withTransaction(this.db, async (client) => {
       const { rows } = await client.query<{ id: string }>(
@@ -48,12 +48,14 @@ export class MatchService {
           won: competitive && r.placement === 1,
           lost: competitive && r.placement > 1,
         });
-        await this.leaderboards.submit(client, game.id, r.userId, r.score);
+        if (!game.cooperative) await this.leaderboards.submit(client, game.id, r.userId, r.score);
       }
       return id;
     });
 
-    await Promise.all(recorded.map((r) => this.leaderboards.publish(game.id, r.userId, r.score)));
+    if (!game.cooperative) {
+      await Promise.all(recorded.map((r) => this.leaderboards.publish(game.id, r.userId, r.score)));
+    }
     return { matchId, results: recorded };
   }
 }

@@ -20,7 +20,13 @@ export class RoomManager {
     return this.rooms.size;
   }
 
-  create(game: AnyGameDefinition, mode: GameMode, withInviteCode: boolean): Room {
+  create(
+    game: AnyGameDefinition,
+    mode: GameMode,
+    withInviteCode: boolean,
+    partySize: number | null = null,
+    options: unknown = undefined,
+  ): Room {
     let code: string | null = null;
     if (withInviteCode) {
       do code = randomRoomCode();
@@ -30,6 +36,8 @@ export class RoomManager {
       game,
       mode,
       code,
+      partySize,
+      options,
       this.timings,
       {
         onFinished: async (r, results) => {

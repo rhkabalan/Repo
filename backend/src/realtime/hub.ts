@@ -8,6 +8,7 @@ import { getUser } from '../users/service.js';
 import { Connection } from './connection.js';
 import type { Matchmaker } from './matchmaker.js';
 import { CloseCode, PROTOCOL_VERSION, clientMessageSchema, type ClientMessage } from './protocol.js';
+import type { Room } from './room.js';
 import type { RoomManager } from './rooms.js';
 
 const AUTH_TIMEOUT_MS = 5_000;
@@ -152,6 +153,9 @@ export class RealtimeHub {
         if (this.busyRoom(conn.userId)) return this.error(conn, 'in_room', 'Leave your current room first');
         const game = this.games.get(msg.gameId);
         if (!game.modes.includes('multiplayer')) return this.error(conn, 'bad_mode', 'Game has no multiplayer');
+        if (game.matchmaking === false) {
+          return this.error(conn, 'no_matchmaking', 'This game is played with friends: create a room and share the code');
+        }
         const position = this.matchmaker.join(conn, game.id);
         return conn.send({ t: 'queue.joined', gameId: game.id, position });
       }
@@ -163,10 +167,20 @@ export class RealtimeHub {
         if (this.busyRoom(conn.userId)) return this.error(conn, 'in_room', 'Leave your current room first');
         const game = this.games.get(msg.gameId);
         if (!game.modes.includes(msg.mode)) return this.error(conn, 'bad_mode', `Game has no ${msg.mode} mode`);
+        const partySize = msg.mode === 'solo' ? 1 : (msg.partySize ?? null);
+        if (partySize !== null && (partySize < game.minPlayers || partySize > game.maxPlayers)) {
+          return this.error(conn, 'bad_party_size', `${game.name} supports ${game.minPlayers}–${game.maxPlayers} players`);
+        }
+        let options: unknown = msg.options;
+        if (game.optionsSchema) {
+          const parsed = game.optionsSchema.safeParse(msg.options ?? {});
+          if (!parsed.success) return this.error(conn, 'bad_options', 'Invalid room options');
+          options = parsed.data;
+        }
         this.matchmaker.leave(conn.userId);
-        const room = this.rooms.create(game, msg.mode, msg.mode === 'multiplayer');
+        const room = this.rooms.create(game, msg.mode, msg.mode === 'multiplayer', partySize, options);
         this.rooms.addPlayer(room, conn);
-        if (msg.mode === 'solo') room.start();
+        if (msg.mode === 'solo' || partySize === 1) this.startRoom(room, conn);
         return;
       }
       case 'room.join': {
@@ -189,7 +203,7 @@ export class RealtimeHub {
         if (room.hostId !== conn.userId) return this.error(conn, 'not_host', 'Only the host can start');
         const problem = room.canStart();
         if (problem) return this.error(conn, 'cannot_start', problem);
-        room.start();
+        this.startRoom(room, conn);
         return;
       }
       case 'room.leave': {
@@ -216,6 +230,15 @@ export class RealtimeHub {
         return;
       }
     }
+  }
+
+  private startRoom(room: Room, host: Connection) {
+    void room.start().then((problem) => {
+      if (problem) {
+        host.violations--; // a refused start is not abuse
+        this.error(host, problem.code, problem.message);
+      }
+    });
   }
 
   shutdown(): void {

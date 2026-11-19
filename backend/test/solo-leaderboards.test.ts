@@ -23,7 +23,12 @@ async function playSolo(auth: Record<string, string>, score: number) {
 describe('solo runs and leaderboards', () => {
   it('lists the available games', async () => {
     const res = await app.inject({ url: '/v1/games' });
-    expect(res.json().games).toEqual([expect.objectContaining({ id: 'orb-rush', modes: ['solo', 'multiplayer'] })]);
+    expect(res.json().games).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'orb-rush', modes: ['solo', 'multiplayer'] }),
+        expect.objectContaining({ id: 'athar-journey', minPlayers: 1, maxPlayers: 3 }),
+      ]),
+    );
   });
 
   it('records a run, awards XP and ranks players', async () => {

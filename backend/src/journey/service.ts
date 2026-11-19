@@ -1,6 +1,7 @@
 import type { Db, Queryable } from '../db/pool.js';
 import { withTransaction } from '../db/pool.js';
-import { levelForXp } from '../users/service.js';
+import { AppError } from '../lib/errors.js';
+import { getUsers, levelForXp } from '../users/service.js';
 import type { Catalog, Lang } from './content/types.js';
 import {
   applyEvent,
@@ -44,6 +45,39 @@ export class JourneyService {
 
   /** Apply a player action atomically. XP also feeds the account-wide level. */
   async apply(userId: string, event: JourneyEvent, lang: Lang) {
+    const { result, awards, state, version } = await this.applyRaw(userId, event);
+    return { result, awards: this.localizeAwards(awards, lang), journey: this.view(state, version, lang) };
+  }
+
+  /**
+   * Make sure every party member can play `chapterId` together: it must be unlocked for all
+   * of them, and anyone who already completed it starts a fresh replay run.
+   */
+  async prepareParty(userIds: string[], chapterId: string): Promise<void> {
+    const locked: string[] = [];
+    for (const userId of userIds) {
+      const { state } = await this.load(this.db, userId, false);
+      const status = state.chapters[chapterId]?.status;
+      if (!status || status === 'locked') locked.push(userId);
+    }
+    if (locked.length) {
+      const names = await getUsers(this.db, locked);
+      throw new AppError(
+        409,
+        'chapter_locked',
+        `Not unlocked yet for: ${locked.map((id) => names.get(id)?.displayName ?? id).join(', ')}`,
+        { userIds: locked },
+      );
+    }
+    for (const userId of userIds) {
+      const { state } = await this.load(this.db, userId, false);
+      if (state.chapters[chapterId]!.status === 'completed') {
+        await this.applyRaw(userId, { type: 'chapter.replay', chapterId });
+      }
+    }
+  }
+
+  async applyRaw(userId: string, event: JourneyEvent) {
     return withTransaction(this.db, async (client) => {
       const { state: before, version } = await this.load(client, userId, true);
       const { state, awards, result } = applyEvent(this.catalog, before, event);
@@ -59,11 +93,7 @@ export class JourneyService {
       if (xp > 0) {
         await client.query(`UPDATE player_stats SET xp = xp + $2, updated_at = now() WHERE user_id = $1`, [userId, xp]);
       }
-      return {
-        result,
-        awards: this.localizeAwards(awards, lang),
-        journey: this.view(state, version + 1, lang),
-      };
+      return { result, awards, state, version: version + 1 };
     });
   }
 

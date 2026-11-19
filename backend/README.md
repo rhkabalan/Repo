@@ -37,6 +37,25 @@ are met. Each reward pays out at most once, so retries, replays and simultaneous
 from two devices can't inflate XP. Replaying a chapter resets the run so the player can
 choose differently; the journal and skills follow the choices from the latest completion.
 
+### Single player, two players or three players
+
+Every chapter can be played alone or as a party of **2 or 3** (real-time co-op):
+
+- **Solo:** through the REST journey API, or a one-seat room (`partySize: 1`, starts at once).
+- **Party:** the host creates a room with `partySize` 2 or 3 and a `chapterId`, and shares
+  the 6-character code. Friends join and press ready; the host starts once every seat is filled.
+- **Shared world:** when anyone finds an account, solves a puzzle (any member can attempt it)
+  or delivers water, it counts for the whole party, and areas open for everyone together.
+  Players see each other move in real time.
+- **Personal choices:** each player makes their own guide and journal choices. The party
+  can complete the mission once every member has chosen.
+- **Credit for everyone:** each accepted action is saved to every member's own journey
+  right away, so XP, badges and unlocks land on all accounts, and nothing is lost if
+  someone leaves early.
+- A party can play a chapter only when every member has unlocked it. Members who already
+  completed it start a replay run (no double XP).
+- Co-op is played with friends (invite codes), not the quick-match queue.
+
 Medina, Tabuk, Al-Sham and Al-Rabadhah are shells (`format: 'legacy'`) until their clues
 and choices are ported from the prototype.
 

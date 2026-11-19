@@ -35,7 +35,19 @@ export interface GameDefinition<State = unknown, Input = unknown, SoloResult = u
   /** Schema for a single player input message. Anything else is rejected. */
   inputSchema: z.ZodType<Input>;
 
-  createState(playerIds: string[], rng: Rng): State;
+  /** Room options chosen by the host (e.g. which chapter). Validated before the room is created. */
+  optionsSchema?: z.ZodType<unknown>;
+  /** Co-operative games: everyone shares the result, so no wins/losses or score leaderboards. */
+  cooperative?: boolean;
+  /** Whether strangers can be matched through the quick-match queue. Default true. */
+  matchmaking?: boolean;
+  /**
+   * Async check/preparation before the countdown, e.g. verifying every player has unlocked
+   * the chosen chapter. Throw an AppError to keep the room in the lobby with that message.
+   */
+  beforeStart?(playerIds: string[], options: unknown): Promise<void>;
+
+  createState(playerIds: string[], rng: Rng, options: unknown): State;
   applyInput(state: State, playerId: string, input: Input): void;
   tick(state: State, dtMs: number, rng: Rng): GameEvent[];
   /** Called when a player leaves for good (disconnect grace period expired or they quit). */

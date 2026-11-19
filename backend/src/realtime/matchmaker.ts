@@ -76,7 +76,9 @@ export class Matchmaker {
           this.rooms.addPlayer(room, t.conn);
           t.conn.send({ t: 'match.found', roomId: room.id, gameId });
         }
-        room.start();
+        void room.start().then((problem) => {
+          if (problem) for (const t of group) t.conn.send({ t: 'error', ...problem });
+        });
       }
       this.queues.set(gameId, queue);
     }

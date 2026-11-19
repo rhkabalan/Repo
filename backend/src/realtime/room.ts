@@ -36,7 +36,7 @@ export interface RoomHooks {
   onDisposed(room: Room): void;
 }
 
-const MAX_INPUTS_PER_TICK = 8;
+const MAX_INPUTS_PER_TICK = 32;
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/1/I confusion
 
 export const randomRoomCode = () =>
@@ -64,6 +64,8 @@ export class Room {
     readonly game: AnyGameDefinition,
     readonly mode: GameMode,
     readonly code: string | null,
+    readonly partySize: number | null,
+    readonly options: unknown,
     private readonly timings: RoomTimings,
     private readonly hooks: RoomHooks,
     private readonly log: FastifyBaseLogger,
@@ -73,8 +75,17 @@ export class Room {
     return [...this.players.values()].filter((p) => !p.gone);
   }
 
+  get capacity() {
+    return this.mode === 'solo' ? 1 : (this.partySize ?? this.game.maxPlayers);
+  }
+
+  get minToStart() {
+    if (this.mode === 'solo') return 1;
+    return this.partySize ?? this.game.minPlayers;
+  }
+
   get isFull() {
-    return this.activePlayers.length >= (this.mode === 'solo' ? 1 : this.game.maxPlayers);
+    return this.activePlayers.length >= this.capacity;
   }
 
   view(): RoomView {
@@ -84,8 +95,10 @@ export class Room {
       gameId: this.game.id,
       mode: this.mode,
       phase: this.phase,
-      minPlayers: this.mode === 'solo' ? 1 : this.game.minPlayers,
-      maxPlayers: this.mode === 'solo' ? 1 : this.game.maxPlayers,
+      minPlayers: this.minToStart,
+      maxPlayers: this.capacity,
+      partySize: this.mode === 'solo' ? 1 : this.partySize,
+      options: this.options ?? null,
       players: this.activePlayers.map((p) => ({
         userId: p.userId,
         displayName: p.displayName,
@@ -145,27 +158,50 @@ export class Room {
   canStart(): string | null {
     if (this.phase !== 'lobby') return 'Game already started';
     const active = this.activePlayers;
-    const min = this.mode === 'solo' ? 1 : this.game.minPlayers;
-    if (active.length < min) return `Need at least ${min} players`;
+    const min = this.minToStart;
+    if (active.length < min) {
+      return this.partySize ? `Waiting for all ${this.partySize} players to join` : `Need at least ${min} players`;
+    }
     if (active.some((p) => !p.ready && p.userId !== this.hostId)) return 'Not everyone is ready';
     return null;
   }
 
-  /** Begin the pre-game countdown, then the simulation. */
-  start(): void {
-    if (this.phase !== 'lobby') return;
+  private starting = false;
+
+  /**
+   * Run the game's pre-start check, then the countdown and simulation.
+   * Resolves with an error (code, message) if the game refused to start.
+   */
+  async start(): Promise<{ code: string; message: string } | null> {
+    if (this.phase !== 'lobby' || this.starting) return null;
+    if (this.game.beforeStart) {
+      this.starting = true;
+      try {
+        await this.game.beforeStart(
+          this.activePlayers.map((p) => p.userId),
+          this.options,
+        );
+      } catch (err) {
+        const e = err as { code?: string; message?: string };
+        return { code: e.code ?? 'cannot_start', message: e.message ?? 'Cannot start' };
+      } finally {
+        this.starting = false;
+      }
+      if (this.phase !== 'lobby' || this.isDisposed || this.activePlayers.length === 0) return null;
+    }
     this.phase = 'countdown';
     const startsAt = Date.now() + this.timings.countdownMs;
     this.broadcastState();
     this.broadcast({ t: 'game.countdown', startsAt, durationMs: this.timings.countdownMs });
     this.countdownTimer = setTimeout(() => this.beginPlaying(), this.timings.countdownMs);
+    return null;
   }
 
   private beginPlaying() {
     this.countdownTimer = null;
     const ids = this.activePlayers.map((p) => p.userId);
     if (ids.length === 0) return this.dispose();
-    this.state = this.game.createState(ids, this.rng);
+    this.state = this.game.createState(ids, this.rng, this.options);
     this.phase = 'playing';
     this.startedAt = new Date();
     this.lastTickAt = performance.now();
@@ -275,7 +311,7 @@ export class Room {
       this.dispose();
       return;
     }
-    if (this.phase === 'countdown' && this.activePlayers.length < (this.mode === 'solo' ? 1 : this.game.minPlayers)) {
+    if (this.phase === 'countdown' && this.activePlayers.length < this.minToStart) {
       // Not enough players to start: back to the lobby.
       if (this.countdownTimer) clearTimeout(this.countdownTimer);
       this.countdownTimer = null;

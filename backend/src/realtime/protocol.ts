@@ -15,7 +15,15 @@ export const clientMessageSchema = z.discriminatedUnion('t', [
   z.object({ t: z.literal('queue.join'), gameId }),
   z.object({ t: z.literal('queue.leave') }),
   /** Private room with an invite code (multiplayer) or an authoritative solo run. */
-  z.object({ t: z.literal('room.create'), gameId, mode: z.enum(['solo', 'multiplayer']).default('multiplayer') }),
+  z.object({
+    t: z.literal('room.create'),
+    gameId,
+    mode: z.enum(['solo', 'multiplayer']).default('multiplayer'),
+    /** Seats in the room (e.g. 1, 2 or 3 for an ATHAR party). Defaults to the game's maximum. */
+    partySize: z.number().int().min(1).max(16).optional(),
+    /** Game-specific options, e.g. `{ "chapterId": "mecca" }`. */
+    options: z.unknown().optional(),
+  }),
   z.object({ t: z.literal('room.join'), code: z.string().min(4).max(12) }),
   z.object({ t: z.literal('room.ready'), ready: z.boolean() }),
   z.object({ t: z.literal('room.start') }),
@@ -45,6 +53,9 @@ export interface RoomView {
   phase: RoomPhase;
   minPlayers: number;
   maxPlayers: number;
+  /** Seats chosen by the host; private rooms start only when every seat is filled. */
+  partySize: number | null;
+  options: unknown;
   players: RoomPlayerView[];
 }
 

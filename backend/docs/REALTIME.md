@@ -42,7 +42,7 @@ solo, use the REST solo session endpoints instead.)
 | `ping` | `ts?` | Echoed in `pong`; use to measure latency |
 | `queue.join` | `gameId` | Join the quick-match queue |
 | `queue.leave` | | |
-| `room.create` | `gameId`, `mode?` (`multiplayer` \| `solo`) | |
+| `room.create` | `gameId`, `mode?` (`multiplayer` \| `solo`), `partySize?`, `options?` | `partySize` = number of seats; private rooms start when all are filled |
 | `room.join` | `code` | Case-insensitive |
 | `room.ready` | `ready` (bool) | Lobby only |
 | `room.start` | | Host only; everyone else must be ready |
@@ -71,6 +71,34 @@ solo, use the REST solo session endpoints instead.)
 `ackSeq` is the last input `seq` the server applied for you. For smooth movement, apply inputs
 locally right away (prediction), then re-apply any inputs newer than `ackSeq` on top of each
 server snapshot (reconciliation). Interpolate other players between the last two snapshots.
+
+## ATHAR co-op (`gameId: "athar-journey"`)
+
+Create: `{"t":"room.create","gameId":"athar-journey","partySize":3,"options":{"chapterId":"mecca"}}`.
+`partySize` is 1, 2 or 3; with 1 the run starts immediately. `room.start` fails with
+`chapter_locked` (naming the players) if the chapter isn't unlocked for everyone.
+
+Inputs (`input.data`):
+
+```jsonc
+// your character's position, ~10 times a second while moving
+{ "kind": "move", "areaId": "hospitality-lane", "x": 320, "y": 180, "facing": "right", "anim": "walk" }
+// a journey action (same as the REST journey events, without chapterId)
+{ "kind": "action", "action": { "type": "discovery.find", "discoveryId": "ali-hospitality" } }
+{ "kind": "action", "action": { "type": "puzzle.attempt", "puzzleId": "passage", "answer": ["sun","shelter","water"] } }
+{ "kind": "action", "action": { "type": "task.progress", "taskId": "water-delivery", "amount": 1 } }
+{ "kind": "action", "action": { "type": "choice.make", "choiceId": "journal-emphasis", "optionId": "courage" } }
+{ "kind": "action", "action": { "type": "mission.complete" } }
+```
+
+`game.state.state` contains `openAreas`, `discoveries`, `puzzles`, `tasks`, `completed` and
+`players` (position, animation, which choices each has made, XP earned this run; only your
+own entry includes your actual choices).
+
+`game.event.event` types: `discovery.find`, `puzzle.attempt` (with `result`), `task.progress`,
+`choice.made`, `mission.completed`, `journey.awards` (XP and badges credited to `playerId`'s
+account), and `action.rejected` (`playerId`, `code`, `message`, `details`, e.g. which
+players still need to choose).
 
 ## Rules and limits
 

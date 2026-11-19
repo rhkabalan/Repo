@@ -14,6 +14,7 @@ import { createPool, type Db } from './db/pool.js';
 import { GameRegistry, defaultGames } from './games/registry.js';
 import type { AnyGameDefinition } from './games/types.js';
 import { catalog } from './journey/content/catalog.js';
+import { createCoopJourney } from './journey/coop.js';
 import { journeyRoutes } from './journey/routes.js';
 import { JourneyService } from './journey/service.js';
 import { leaderboardRoutes } from './leaderboards/routes.js';
@@ -78,7 +79,8 @@ export async function buildApp(config: Config, opts: BuildOptions = {}): Promise
   const redis = createRedis(config.REDIS_URL);
   if (opts.runMigrations ?? true) await migrate(db, (m) => app.log.info(m));
 
-  const games = new GameRegistry(opts.games ?? defaultGames());
+  const journey = new JourneyService(db, catalog);
+  const games = new GameRegistry([...(opts.games ?? defaultGames()), createCoopJourney(catalog, journey, app.log)]);
   const tokens = new TokenService(db, config.JWT_SECRET, config.ACCESS_TOKEN_TTL_SECONDS, config.REFRESH_TOKEN_TTL_DAYS);
   const leaderboards = new LeaderboardService(db, redis);
   const matches = new MatchService(db, leaderboards);
@@ -96,7 +98,7 @@ export async function buildApp(config: Config, opts: BuildOptions = {}): Promise
     tokens,
     auth: new AuthService(db, tokens, opts.googleVerifier ?? createGoogleVerifier(config.GOOGLE_CLIENT_IDS)),
     saves: new SaveService(db),
-    journey: new JourneyService(db, catalog),
+    journey,
     leaderboards,
     matches,
     solo: new SoloService(redis, games, matches),
