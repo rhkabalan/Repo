@@ -215,13 +215,29 @@ export class Character {
         Object.entries(clips).map(async ([name, clipUrl]) => {
           try {
             const clip = (await Character.load(clipUrl)).animations[0]?.clone();
-            if (clip) clip.name = name;
+            if (!clip) return undefined;
+            clip.name = name;
+            // Extra clips come from separately rigged files whose position data is recorded
+            // in a different scale and may include root motion, which sinks or slides the
+            // character. Keep only joint rotations; height and placement stay the model's.
+            clip.tracks = clip.tracks.filter((t) => t.name.endsWith('.quaternion'));
             return clip;
           } catch {
             return undefined;
           }
         }),
       );
+      for (const clip of baseClips) {
+        for (const track of clip.tracks) {
+          if (!track.name.endsWith('.position') || !/hips/i.test(track.name)) continue;
+          // In-place locomotion: the game moves the character, the clip must not.
+          const v = track.values;
+          for (let i = 0; i < v.length; i += 3) {
+            v[i] = v[0]!;
+            v[i + 2] = v[2]!;
+          }
+        }
+      }
       const animations = [...baseClips, ...extra.filter((c): c is THREE.AnimationClip => !!c)];
       const model = cloneSkinned(scene);
       model.traverse((o) => {
