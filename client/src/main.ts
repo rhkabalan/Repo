@@ -283,6 +283,11 @@ function endSession() {
 async function boot() {
   setLang(initialLang());
   world.start();
+  if (import.meta.env.DEV && location.search.includes('lineup')) {
+    hideScreen();
+    (await import('./game/lineup')).showLineup(world);
+    return;
+  }
   try {
     await ensureSignedIn();
     await loadCatalog();

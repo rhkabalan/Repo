@@ -3,7 +3,8 @@ import type { Catalog, Chapter } from '../content';
 import { getLang, t } from '../i18n';
 import type { Award, MissionDriver, RemotePlayer, RunState } from '../net/driver';
 import { esc, modal, modalOpen, sequencePuzzle, toast, translate } from '../ui/ui';
-import { Character, LOOKS, type Anim } from './character';
+import { Character, LOOKS, type Anim, type Look } from './character';
+import { CAST, PARTY_LOOKS, type Design } from './cast';
 import { Controls } from './controls';
 import { buildMecca, type Interactable } from './mecca';
 import { PlayerController } from './player';
@@ -91,7 +92,7 @@ export class GameSession {
     this.chapter = catalog.chapters.find((c) => c.id === driver.chapterId)!;
     this.add(this.env.group);
 
-    const me = new Character(LOOKS.abuDharr!);
+    const me = new Character(CAST.player.look, CAST.player.model);
     me.root.position.copy(this.env.spawn);
     me.root.rotation.y = Math.PI;
     this.add(me.root);
@@ -123,8 +124,8 @@ export class GameSession {
     this.jar.visible = false;
     me.root.add(this.jar);
 
-    this.spawnNpc(LOOKS.guide!, 'guide', 'talk', Math.PI * 0.75);
-    this.spawnNpc(LOOKS.traveler!, 'traveler', 'sit', Math.PI / 2);
+    this.spawnNpc(CAST.guide, 'guide', 'talk', Math.PI * 0.75);
+    this.spawnNpc(CAST.restingTraveler, 'traveler', 'sit', Math.PI / 2);
     for (const [x, z, yaw] of [[-2.4, -40, 1], [2.8, -11, -2], [-11, -72, 0.6]] as const) {
       const c = new Character(LOOKS.townsman!);
       c.root.position.set(x, 0, z);
@@ -141,9 +142,9 @@ export class GameSession {
     this.disposers.push(world.onUpdate((dt, time) => this.update(dt, time)));
   }
 
-  private spawnNpc(look: (typeof LOOKS)[string], id: string, anim: Anim, yaw: number) {
+  private spawnNpc(design: Design, id: string, anim: Anim, yaw: number) {
     const it = this.env.interactables.find((i) => i.id === id)!;
-    const c = new Character(look);
+    const c = new Character(design.look, design.model);
     c.root.position.copy(it.position);
     c.root.rotation.y = yaw;
     c.setAnim(anim);
@@ -237,7 +238,7 @@ export class GameSession {
   }
 
   private syncRemote(players: RemotePlayer[]) {
-    const looks = [LOOKS.companion1!, LOOKS.companion2!];
+    const looks: Look[] = PARTY_LOOKS;
     for (const p of players) {
       let r = this.remote.get(p.id);
       if (!r) {

@@ -13,12 +13,26 @@ export interface Look {
   skin: string;
   beard: string | null;
   height?: number;
+  /** Sash/belt colour. */
+  sash?: string;
+  /** short = trimmed, full = to the collarbone, long = to the chest. */
+  beardLength?: 'short' | 'full' | 'long';
+  /** 0.55 = shawl over the shoulders, 1 = cloak to the shins. */
+  cloakLength?: number;
+  /** Fringed hem on the cloak/shawl. */
+  fringe?: boolean;
+  satchel?: boolean;
+  staff?: boolean;
 }
 
 export const LOOKS: Record<string, Look> = {
+  /* Designs from the ATHAR concept sheets (art/concepts). */
+  traveler: { robe: '#d4c6a8', robeStripe: '#cbbd9e', cloak: '#6e5340', turban: '#cbbd9f', skin: '#a87a55', beard: '#231a14', sash: '#5a3a24', beardLength: 'short', cloakLength: 0.85, fringe: true, satchel: true },
+  steadfast: { robe: '#5f6878', robeStripe: '#58616f', cloak: '#4a3a2d', turban: '#d3c7ae', skin: '#9c7152', beard: '#2a2420', sash: '#8a7357', beardLength: 'full', cloakLength: 1, fringe: true },
+  elder: { robe: '#d8cdb6', robeStripe: '#cfc3aa', cloak: '#8a4d32', turban: '#d6c9ad', skin: '#a3765a', beard: '#8f8a84', sash: '#d8cdb6', beardLength: 'long', cloakLength: 0.62, fringe: true, staff: true },
   abuDharr: { robe: '#b9a47f', robeStripe: '#ad9873', cloak: '#6b4a2e', turban: '#d6cbb3', skin: '#b98a63', beard: '#2b211b' },
   guide: { robe: '#3a4a6b', robeStripe: '#33425f', cloak: '#26324a', turban: '#d9cfb8', skin: '#a47a56', beard: '#5a5550' },
-  traveler: { robe: '#8b6d4a', robeStripe: '#7e6242', cloak: '#4f3b28', turban: '#a3927a', skin: '#9b7150', beard: '#3b3029' },
+  wayfarer: { robe: '#8b6d4a', robeStripe: '#7e6242', cloak: '#4f3b28', turban: '#a3927a', skin: '#9b7150', beard: '#3b3029' },
   townsman: { robe: '#a65f3c', robeStripe: '#985636', cloak: '#5c3a26', turban: '#cfc2a6', skin: '#ad8059', beard: '#2f2520' },
   companion1: { robe: '#5e7454', robeStripe: '#566a4d', cloak: '#3c4a35', turban: '#d3c8b0', skin: '#b48460', beard: '#2a211b' },
   companion2: { robe: '#7a4f6b', robeStripe: '#6f4862', cloak: '#4a3045', turban: '#d6cbb3', skin: '#a77b58', beard: '#3a2d25' },
@@ -65,15 +79,29 @@ export class Character {
     this.body.add(robe);
 
     // Open cloak over the shoulders and back.
-    const cloakProfile = [[0.0, 0.08], [0.38, 0.1], [0.37, 0.6], [0.31, 1.15], [0.3, 1.38], [0.22, 1.47], [0.0, 1.47]].map(
-      ([x, y]) => new THREE.Vector2(x!, y!),
-    );
-    const cloakGeo = new THREE.LatheGeometry(cloakProfile, 28, Math.PI * 0.62, Math.PI * 1.76);
+    const len = look.cloakLength ?? 0.95;
+    const hemY = 1.45 - len * 1.37; // where the cloak ends
+    const cloakProfile = [[0.0, hemY], [0.39, hemY + 0.02], [0.37, Math.max(hemY + 0.1, 0.6)], [0.32, 1.15], [0.31, 1.38], [0.22, 1.47], [0.0, 1.47]]
+      .filter(([, y], i, a) => i === 0 || y! >= a[i - 1]![1]!)
+      .map(([x, y]) => new THREE.Vector2(x!, y!));
+    // Lathe angle 0 faces +z (the character's front); leave a ~70° opening there.
+    const cloakGeo = new THREE.LatheGeometry(cloakProfile, 28, Math.PI * 0.2, Math.PI * 1.6);
     const cloak = shadow(new THREE.Mesh(cloakGeo, new THREE.MeshStandardMaterial({ color: look.cloak, roughness: 0.95, side: THREE.DoubleSide })));
     this.body.add(cloak);
+    if (look.fringe) {
+      // Short hanging threads along the hem.
+      const fringeMat = new THREE.MeshStandardMaterial({ color: look.cloak, roughness: 1 });
+      const thread = new THREE.CylinderGeometry(0.006, 0.006, 0.07, 3);
+      for (let i = 0; i < 40; i++) {
+        const a = Math.PI * 0.2 + (i / 39) * Math.PI * 1.6;
+        const f = new THREE.Mesh(thread, fringeMat);
+        f.position.set(Math.sin(a) * 0.39, hemY - 0.03, Math.cos(a) * 0.39);
+        this.body.add(f);
+      }
+    }
 
     // Sash
-    const sash = shadow(new THREE.Mesh(new THREE.TorusGeometry(0.285, 0.035, 8, 28), this.mat('#7a2e1f', 0.8)));
+    const sash = shadow(new THREE.Mesh(new THREE.TorusGeometry(0.285, 0.035, 8, 28), this.mat(look.sash ?? '#7a2e1f', 0.8)));
     sash.rotation.x = Math.PI / 2;
     sash.position.y = 0.95;
     this.body.add(sash);
@@ -101,9 +129,14 @@ export class Character {
     }
     if (look.beard) {
       const beard = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.115, 18, 14, 0, Math.PI * 2, Math.PI * 0.42, Math.PI * 0.58), this.mat(look.beard, 1)));
-      beard.scale.set(1, 1.35, 0.95);
-      beard.position.set(0, -0.04, 0.025);
+      const lengthScale = { short: 1.05, full: 1.45, long: 2.1 }[look.beardLength ?? 'full'];
+      beard.scale.set(1, lengthScale, 0.95);
+      beard.position.set(0, -0.04 - (lengthScale - 1.05) * 0.06, 0.025);
       head.add(beard);
+      const moustache = new THREE.Mesh(new THREE.TorusGeometry(0.04, 0.012, 6, 12, Math.PI), this.mat(look.beard, 1));
+      moustache.position.set(0, -0.035, 0.118);
+      moustache.rotation.x = Math.PI;
+      head.add(moustache);
     }
     // Turban: wrapped torus layers plus a crown.
     const turbanMat = this.mat(look.turban, 0.95);
@@ -141,6 +174,22 @@ export class Character {
       foot.position.set(side * 0.11, 0.025, 0.05);
       this.body.add(foot);
       this.parts[side < 0 ? 'footL' : 'footR'] = foot;
+    }
+    if (look.satchel) {
+      const leather = this.mat('#6b4428', 0.7);
+      const bag = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.17, 0.08), leather));
+      bag.position.set(0.28, 0.82, 0.12);
+      bag.rotation.y = -0.5;
+      this.body.add(bag);
+      const strap = shadow(new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.012, 4, 30, Math.PI * 0.9), leather));
+      strap.position.set(0.02, 1.08, 0.05);
+      strap.rotation.set(0.15, 0, 0.75);
+      this.body.add(strap);
+    }
+    if (look.staff) {
+      const staff = shadow(new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.03, 1.75, 7), this.mat('#6a4a2c', 0.9)));
+      staff.position.set(0, -0.32, 0.05);
+      this.parts.armR!.add(staff); // held in the right hand, swings with the arm
     }
     this.parts.head = head;
     this.body.scale.setScalar(h * 1.08);
