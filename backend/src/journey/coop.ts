@@ -29,6 +29,8 @@ const actionSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('task.progress'), taskId: z.string(), amount: z.number().int().min(1).max(10) }),
   z.object({ type: z.literal('choice.make'), choiceId: z.string(), optionId: z.string() }),
   z.object({ type: z.literal('mission.complete') }),
+  z.object({ type: z.literal('item.collect'), collectibleId: z.string() }),
+  z.object({ type: z.literal('encounter.resolve'), encounterId: z.string(), method: z.enum(['fight', 'sneak', 'route']) }),
 ]);
 
 const inputSchema = z.discriminatedUnion('kind', [
@@ -172,7 +174,11 @@ export function createCoopJourney(
 
       if (action.type === 'mission.complete') {
         const mission = chapter.mission;
-        const unsolved = mission.completionRequiresPuzzles.filter((id) => !progress.puzzles[id]?.solved);
+        const unsolved = [
+          ...mission.completionRequiresPuzzles.filter((id) => !progress.puzzles[id]?.solved),
+          ...mission.encounters.filter((e) => e.requiredForCompletion && !progress.encounters[e.id]).map((e) => e.id),
+          ...mission.completionRequiresDiscoveries.filter((d) => !progress.discoveries.includes(d)),
+        ];
         const waitingOn = [...state.members.values()]
           .filter((m) => m.active)
           .flatMap((m) =>
@@ -203,7 +209,9 @@ export function createCoopJourney(
       }
       const already =
         (action.type === 'discovery.find' && progress.discoveries.includes(action.discoveryId)) ||
-        (action.type === 'puzzle.attempt' && progress.puzzles[action.puzzleId]?.solved);
+        (action.type === 'puzzle.attempt' && progress.puzzles[action.puzzleId]?.solved) ||
+        (action.type === 'item.collect' && progress.collectibles.includes(action.collectibleId)) ||
+        (action.type === 'encounter.resolve' && !!progress.encounters[action.encounterId]);
       state.run = outcome.state;
       state.outbox.push({ ...action, playerId, result: outcome.result });
       // Wrong answers stay in the party run; only meaningful progress is written to journeys.
@@ -238,6 +246,8 @@ export function createCoopJourney(
         discoveries: p.discoveries,
         puzzles: p.puzzles,
         tasks: p.tasks,
+        collectibles: p.collectibles,
+        encounters: p.encounters,
         completed: state.completed,
         players: [...state.members.values()].map((m) => ({
           id: m.id,

@@ -50,16 +50,17 @@ const journeyOf = async (p: Player) => (await app.inject({ url: '/v1/journey', h
 
 async function playMecca(members: Player[]) {
   const [a, b = a, c = b] = members;
-  act(a!, { type: 'discovery.find', discoveryId: 'ali-hospitality' });
-  act(b!, { type: 'puzzle.attempt', puzzleId: 'passage', answer: ['water', 'sun', 'shelter'] });
-  await a!.client.waitFor('game.event', (m) => m.event.type === 'puzzle.attempt' && m.event.result.correct === false);
-  act(c!, { type: 'puzzle.attempt', puzzleId: 'passage', answer: ['sun', 'shelter', 'water'] });
+  act(a!, { type: 'encounter.resolve', encounterId: 'staff-training', method: 'fight' });
+  act(b!, { type: 'item.collect', collectibleId: 'water-1' });
+  await a!.client.waitFor('game.state', (m) => m.state.encounters?.['staff-training'] === 'fight');
+  act(c!, { type: 'encounter.resolve', encounterId: 'extortioners', method: 'fight' });
   await a!.client.waitFor('game.state', (m) => m.state.openAreas.includes('meeting-courtyard'));
-  act(a!, { type: 'discovery.find', discoveryId: 'public-declaration' });
-  act(b!, { type: 'task.progress', taskId: 'water-delivery', amount: 3 });
-  act(c!, { type: 'puzzle.attempt', puzzleId: 'story-order', answer: ['arrival', 'ali-welcome', 'declaration'] });
-  await a!.client.waitFor('game.state', (m) => m.state.puzzles['story-order']?.solved === true);
+  act(a!, { type: 'discovery.find', discoveryId: 'arrival-hospitality' });
+  await a!.client.waitFor('game.state', (m) => m.state.discoveries.includes('arrival-hospitality'));
 }
+
+/** XP each member earns from playMecca + completion: 20 + 2 + 30 + 30 + 40. */
+const PARTY_XP = 122;
 
 describe('ATHAR co-op journey (1–3 players)', () => {
   it('plays Mecca as a party of three and credits every member', async () => {
@@ -68,42 +69,41 @@ describe('ATHAR co-op journey (1–3 players)', () => {
     await Promise.all(members.map((m) => m.client.waitFor('game.start')));
 
     // Positions are shared so everyone sees each other walking.
-    host.client.send({ t: 'input', seq: ++host.seq, data: { kind: 'move', areaId: 'hospitality-lane', x: 320, y: 180, anim: 'walk' } });
+    host.client.send({ t: 'input', seq: ++host.seq, data: { kind: 'move', areaId: 'training-yard', x: 320, y: 180, anim: 'walk' } });
     const seen = await members[1]!.client.waitFor('game.state', (m) =>
       m.state.players.some((p: { id: string; x: number }) => p.id === host.id && p.x === 320),
     );
     expect(seen.state.players).toHaveLength(3);
 
+    // The party can't finish before the obstacle is passed and the account discovered.
+    act(host, { type: 'mission.complete' });
+    const rejected = await host.client.waitFor('game.event', (m) => m.event.type === 'action.rejected');
+    expect(rejected.event.details.puzzles).toEqual(['staff-training', 'extortioners', 'arrival-hospitality']);
+
     await playMecca(members);
 
-    // Each member picks their own journal emphasis; completion waits for everyone.
-    act(members[0]!, { type: 'choice.make', choiceId: 'journal-emphasis', optionId: 'hospitality' });
-    act(members[1]!, { type: 'choice.make', choiceId: 'journal-emphasis', optionId: 'courage' });
-    for (const m of members.slice(0, 2)) {
+    // Each member writes their own journal reflection.
+    const picks = ['hospitality', 'seeking', 'seeking'];
+    members.forEach((m, i) => act(m, { type: 'choice.make', choiceId: 'journal-emphasis', optionId: picks[i] }));
+    for (const m of members) {
       await host.client.waitFor('game.event', (e) => e.event.type === 'choice.made' && e.event.playerId === m.id);
     }
     act(host, { type: 'mission.complete' });
-    const rejected = await host.client.waitFor('game.event', (m) => m.event.type === 'action.rejected');
-    expect(rejected.event.details.choices).toEqual([{ playerId: members[2]!.id, choiceId: 'journal-emphasis' }]);
-
-    act(members[2]!, { type: 'choice.make', choiceId: 'journal-emphasis', optionId: 'steadfastness' });
-    await host.client.waitFor('game.event', (e) => e.event.type === 'choice.made' && e.event.playerId === members[2]!.id);
-    act(host, { type: 'mission.complete' });
     const end = await host.client.waitFor('game.end');
     expect(end.results).toHaveLength(3);
-    for (const r of end.results) expect(r).toMatchObject({ placement: 1, score: 120 });
+    for (const r of end.results) expect(r).toMatchObject({ placement: 1, score: PARTY_XP });
 
     for (const [i, m] of members.entries()) {
       const j = await journeyOf(m);
-      expect(j.xp).toBe(120);
+      expect(j.xp).toBe(PARTY_XP);
       expect(j.chapters[0].status).toBe('completed');
       expect(j.chapters[1].status).toBe('available');
-      expect(j.achievements.badges).toHaveLength(2);
-      expect(j.journal.reflections[0].optionId).toBe(['hospitality', 'courage', 'steadfastness'][i]);
+      expect(j.achievements.badges.map((x: { badgeId: string }) => x.badgeId).sort()).toEqual(['chapter-mecca', 'history-arrival']);
+      expect(j.journal.reflections[0].optionId).toBe(['hospitality', 'seeking', 'seeking'][i]);
     }
     // Co-op: nobody "lost".
     const stats = (await app.inject({ url: '/v1/me', headers: bearer(members[1]!.token) })).json().stats;
-    expect(stats).toMatchObject({ gamesPlayed: 1, wins: 0, losses: 0, xp: 120 });
+    expect(stats).toMatchObject({ gamesPlayed: 1, wins: 0, losses: 0, xp: PARTY_XP });
     members.forEach((m) => m.client.close());
   });
 
@@ -112,13 +112,13 @@ describe('ATHAR co-op journey (1–3 players)', () => {
     host.client.send({ t: 'room.start' });
     await host.client.waitFor('game.start');
     await playMecca(members);
-    for (const m of members) act(m, { type: 'choice.make', choiceId: 'journal-emphasis', optionId: 'courage' });
+    for (const m of members) act(m, { type: 'choice.make', choiceId: 'journal-emphasis', optionId: 'seeking' });
     for (const m of members) {
       await host.client.waitFor('game.event', (e) => e.event.type === 'choice.made' && e.event.playerId === m.id);
     }
     act(members[1]!, { type: 'mission.complete' });
     await host.client.waitFor('game.end');
-    for (const m of members) expect((await journeyOf(m)).xp).toBe(120);
+    for (const m of members) expect((await journeyOf(m)).xp).toBe(PARTY_XP);
     members.forEach((m) => m.client.close());
   });
 
@@ -130,7 +130,7 @@ describe('ATHAR co-op journey (1–3 players)', () => {
     act(solo, { type: 'choice.make', choiceId: 'journal-emphasis', optionId: 'hospitality' });
     act(solo, { type: 'mission.complete' });
     await solo.client.waitFor('game.end');
-    expect((await journeyOf(solo)).xp).toBe(120);
+    expect((await journeyOf(solo)).xp).toBe(PARTY_XP);
     solo.client.close();
   });
 

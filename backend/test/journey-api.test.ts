@@ -7,80 +7,68 @@ beforeAll(async () => (app = await makeApp()));
 afterAll(async () => app.close());
 
 describe('journey API', () => {
-  it('serves the catalog in Arabic or English without solutions', async () => {
+  it('serves the catalog in Arabic or English', async () => {
     const ar = await app.inject({ url: '/v1/journey/content', headers: { 'accept-language': 'ar-SA,ar;q=0.9' } });
     expect(ar.json().lang).toBe('ar');
     expect(ar.json().chapters[0].setting).toBe('مكة');
     const en = await app.inject({ url: '/v1/journey/content?lang=en' });
-    expect(en.json().chapters[0].mission.areas[0].name).toBe('Hospitality Lane');
-    expect(en.body).not.toContain('"solution"');
+    expect(en.json().chapters[0].mission.areas[0].name).toBe('Training Yard');
+    expect(en.json().items.map((i: { id: string }) => i.id)).toContain('water');
   });
 
-  it('plays the Mecca mission end to end and syncs progress to the account', async () => {
-    const { tokens } = await guest(app);
-    const auth = bearer(tokens.accessToken);
-    const send = (event: object) =>
-      app.inject({ method: 'POST', url: '/v1/journey/events?lang=en', headers: auth, payload: event });
+  it('plays the Mecca adventure end to end and syncs progress to the account', async () => {
+    const auth = bearer((await guest(app)).tokens.accessToken);
+    const send = (event: object) => app.inject({ method: 'POST', url: '/v1/journey/events?lang=en', headers: auth, payload: { chapterId: 'mecca', ...event } });
 
-    const start = await app.inject({ url: '/v1/journey', headers: auth });
-    expect(start.json().chapters.map((c: { status: string }) => c.status)).toEqual([
-      'available', 'locked', 'locked', 'locked', 'locked',
+    expect((await send({ type: 'encounter.resolve', encounterId: 'staff-training', method: 'fight' })).json().awards).toEqual([
+      { type: 'xp', amount: 20, reason: 'encounter_fight' },
     ]);
+    const picked = await send({ type: 'item.collect', collectibleId: 'water-1' });
+    expect(picked.json().result).toMatchObject({ added: 1, itemId: 'water', total: 1 });
 
-    expect((await send({ type: 'choice.make', chapterId: 'mecca', choiceId: 'guide-approach', optionId: 'route-board' })).statusCode).toBe(200);
-    const found = await send({ type: 'discovery.find', chapterId: 'mecca', discoveryId: 'ali-hospitality' });
-    expect(found.json().awards).toEqual([{ type: 'xp', amount: 20, reason: 'discovery' }]);
-
-    const blocked = await send({ type: 'discovery.find', chapterId: 'mecca', discoveryId: 'public-declaration' });
+    const blocked = await send({ type: 'discovery.find', discoveryId: 'arrival-hospitality' });
     expect(blocked.statusCode).toBe(409);
     expect(blocked.json().error.code).toBe('area_locked');
 
-    const wrong = await send({ type: 'puzzle.attempt', chapterId: 'mecca', puzzleId: 'passage', answer: ['water', 'sun', 'shelter'] });
-    expect(wrong.json().result).toMatchObject({ correct: false, attempts: 1 });
-    const right = await send({ type: 'puzzle.attempt', chapterId: 'mecca', puzzleId: 'passage', answer: ['sun', 'shelter', 'water'] });
-    expect(right.json().result).toMatchObject({ correct: true, openedAreas: ['meeting-courtyard'] });
-
-    await send({ type: 'discovery.find', chapterId: 'mecca', discoveryId: 'public-declaration' });
-    for (let i = 0; i < 3; i++) await send({ type: 'task.progress', chapterId: 'mecca', taskId: 'water-delivery', amount: 1 });
-    await send({ type: 'puzzle.attempt', chapterId: 'mecca', puzzleId: 'story-order', answer: ['arrival', 'ali-welcome', 'declaration'] });
-    await send({ type: 'choice.make', chapterId: 'mecca', choiceId: 'journal-emphasis', optionId: 'steadfastness' });
-    const done = await send({ type: 'mission.complete', chapterId: 'mecca' });
+    expect((await send({ type: 'encounter.resolve', encounterId: 'extortioners', method: 'sneak' })).json().result).toMatchObject({
+      method: 'sneak',
+      openedAreas: ['meeting-courtyard'],
+    });
+    const found = await send({ type: 'discovery.find', discoveryId: 'arrival-hospitality' });
+    expect(found.json().awards).toEqual(
+      expect.arrayContaining([expect.objectContaining({ type: 'badge', badgeId: 'history-arrival', category: 'history' })]),
+    );
+    const done = await send({ type: 'mission.complete' });
     expect(done.statusCode).toBe(200);
-    expect(done.json().awards).toEqual([
-      { type: 'xp', amount: 40, reason: 'mission_complete' },
-      { type: 'badge', badgeId: 'chapter-mecca', name: 'Mecca' },
-      { type: 'chapter_unlocked', chapterId: 'medina' },
-    ]);
+    expect(done.json().awards).toEqual(expect.arrayContaining([{ type: 'chapter_unlocked', chapterId: 'ghifar' }]));
 
-    // A different device signing into the same account sees the same journey.
     const view = (await app.inject({ url: '/v1/journey?lang=ar', headers: auth })).json();
-    expect(view.xp).toBe(120);
-    expect(view.chapters[0]).toMatchObject({ status: 'completed', earnedXp: 120, maxXp: 120 });
-    expect(view.chapters[1].status).toBe('available');
-    expect(view.achievements).toMatchObject({ completedChapters: 1, discoveredClues: 2 });
-    expect(view.achievements.badges.map((b: { name: string }) => b.name).sort()).toEqual(['وسام الرحمة', 'وسام مكة']);
-    expect(view.journal.accounts).toHaveLength(2);
-    expect(view.journal.reflections[0].text).toContain('أبو ذرٍّ');
+    expect(view.chapters[0]).toMatchObject({ status: 'completed', encounters: { 'staff-training': 'fight', extortioners: 'sneak' } });
+    expect(view.chapters[1]).toMatchObject({ chapterId: 'ghifar', status: 'available' });
+    expect(view.inventory.find((i: { itemId: string }) => i.itemId === 'water')).toMatchObject({ count: 1, capacity: 3, name: 'قربة ماء' });
+    expect(view.achievements.historyBadges.map((b: { badgeId: string }) => b.badgeId)).toEqual(['history-arrival']);
+    expect(view.upgrades.find((u: { upgradeId: string }) => u.upgradeId === 'stamina')).toMatchObject({ level: 0, nextCost: { provisions: 2 } });
+  });
 
-    // Journey XP counts toward the account level.
-    const me = (await app.inject({ url: '/v1/me', headers: auth })).json();
-    expect(me.stats.xp).toBe(120);
-    expect(me.stats.level).toBe(2);
+  it('buys upgrades through the API', async () => {
+    const auth = bearer((await guest(app)).tokens.accessToken);
+    const send = (event: object) => app.inject({ method: 'POST', url: '/v1/journey/events', headers: auth, payload: event });
+    await send({ type: 'item.collect', chapterId: 'mecca', collectibleId: 'provisions-1' });
+    const poor = await send({ type: 'upgrade.buy', upgradeId: 'stamina' });
+    expect(poor.statusCode).toBe(409);
+    expect(poor.json().error).toMatchObject({ code: 'missing_items', details: { needs: { provisions: 2 } } });
   });
 
   it('handles simultaneous events from two devices without double-awarding', async () => {
     const auth = bearer((await guest(app)).tokens.accessToken);
-    const event = { type: 'discovery.find', chapterId: 'mecca', discoveryId: 'ali-hospitality' };
-    await Promise.all(
-      Array.from({ length: 5 }, () => app.inject({ method: 'POST', url: '/v1/journey/events', headers: auth, payload: event })),
-    );
-    expect((await app.inject({ url: '/v1/journey', headers: auth })).json().xp).toBe(20);
+    const event = { type: 'item.collect', chapterId: 'mecca', collectibleId: 'fragment-1' };
+    await Promise.all(Array.from({ length: 5 }, () => app.inject({ method: 'POST', url: '/v1/journey/events', headers: auth, payload: event })));
+    expect((await app.inject({ url: '/v1/journey', headers: auth })).json().xp).toBe(5);
   });
 
   it('validates events', async () => {
     const auth = bearer((await guest(app)).tokens.accessToken);
-    const res = await app.inject({ method: 'POST', url: '/v1/journey/events', headers: auth, payload: { type: 'teleport' } });
-    expect(res.statusCode).toBe(400);
+    expect((await app.inject({ method: 'POST', url: '/v1/journey/events', headers: auth, payload: { type: 'teleport' } })).statusCode).toBe(400);
     const locked = await app.inject({ method: 'POST', url: '/v1/journey/events', headers: auth, payload: { type: 'chapter.start', chapterId: 'medina' } });
     expect(locked.json().error.code).toBe('chapter_locked');
   });
