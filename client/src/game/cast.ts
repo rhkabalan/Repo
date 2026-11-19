@@ -26,8 +26,20 @@ export const DESIGNS: Record<'traveler' | 'steadfast' | 'elder', Design> = {
       run: `${MODEL_CDN}/hf_20261119_015943_79bdcd5c-2c4b-40ee-a293-3314b6373e46.glb`,
     },
   },
-  steadfast: { look: LOOKS.steadfast! /* , model: '/models/steadfast.glb' */ },
-  elder: { look: LOOKS.elder! /* , model: '/models/elder.glb' */ },
+  steadfast: {
+    look: LOOKS.steadfast!,
+    model: `${MODEL_CDN}/hf_20261119_021650_a8b10fc6-c05b-444e-82d1-759d2e541ff3.glb`,
+    clips: {
+      /*STEADFAST_CLIPS*/
+    },
+  },
+  elder: {
+    look: LOOKS.elder!,
+    model: `${MODEL_CDN}/hf_20261119_021652_baa0b0c5-0456-42ef-9f6d-60fc8b743160.glb`,
+    clips: {
+      /*ELDER_CLIPS*/
+    },
+  },
 };
 
 export type CharacterId = keyof typeof DESIGNS;
