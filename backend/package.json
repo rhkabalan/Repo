@@ -14,7 +14,8 @@
     "migrate": "tsx src/db/migrate.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "export:unity": "tsx scripts/export-unity-content.ts"
   },
   "dependencies": {
     "@fastify/cors": "^11.4.3",
