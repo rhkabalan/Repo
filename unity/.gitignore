@@ -1,0 +1,14 @@
+# Unity generated
+ATHAR/[Ll]ibrary/
+ATHAR/[Tt]emp/
+ATHAR/[Oo]bj/
+ATHAR/[Bb]uild/
+ATHAR/[Bb]uilds/
+ATHAR/[Ll]ogs/
+ATHAR/[Uu]ser[Ss]ettings/
+ATHAR/*.csproj
+ATHAR/*.sln
+ATHAR/.vs/
+ATHAR/.idea/
+*.apk
+*.aab

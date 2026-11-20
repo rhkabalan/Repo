@@ -1,0 +1,23 @@
+{
+  "name": "athar-client",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ATHAR 3D game client (web; packaged for iOS/Android).",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "build:offline": "tsc --noEmit && VITE_OFFLINE=1 vite build --base ./ --outDir dist-offline"
+  },
+  "dependencies": {
+    "three": "^0.187.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/three": "^0.187.0",
+    "typescript": "^5.9.3",
+    "vite": "^8.3.8"
+  }
+}
