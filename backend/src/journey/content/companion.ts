@@ -22,6 +22,12 @@ export interface NarrationLine {
 const AL_FAQIH = { en: 'Al al-Faqih, Abu Dharr al-Ghifari: Ramz al-Yaqaza, ch. 1', ar: 'آل الفقيه، أبو ذر الغفاري رمز اليقظة، الفصل ١' };
 const AYAN = { en: 'Muhsin al-Amin, Aʿyan al-Shiʿa, vol. 16, pp. 316–321', ar: 'محسن الأمين، أعيان الشيعة، ج ١٦، ص ٣١٦–٣٢١' };
 const KHISAL = { en: 'al-Saduq, al-Khisal, p. 42', ar: 'الصدوق، الخصال، ص ٤٢' };
+const AL_FAQIH_2 = { en: 'Al al-Faqih, Abu Dharr al-Ghifari: Ramz al-Yaqaza, pp. 38–43', ar: 'آل الفقيه، أبو ذر الغفاري رمز اليقظة، ص ٣٨–٤٣' };
+const KHOEI = { en: 'al-Khoei, Muʿjam Rijal al-Hadith, vol. 4, p. 171 (from Imam al-Sadiq)', ar: 'الخوئي، معجم رجال الحديث، ج ٤، ص ١٧١ (عن الإمام الصادق)' };
+const WARRAM = { en: 'Warram, Tanbih al-Khawatir, vol. 2, pp. 300–314', ar: 'ورّام، تنبيه الخواطر، ج ٢، ص ٣٠٠–٣١٤' };
+const MAANI = { en: 'al-Saduq, Maʿani al-Akhbar (narrated from Imam al-Sadiq)', ar: 'الصدوق، معاني الأخبار (عن الإمام الصادق)' };
+const KHARAIJ = { en: 'al-Majlisi, Bihar al-Anwar, vol. 22, p. 433 (from al-Rawandi, al-Khara’ij)', ar: 'المجلسي، بحار الأنوار، ج ٢٢، ص ٤٣٣ (عن الراوندي، الخرائج)' };
+const MESSAGE = { en: 'Jaʿfar Subhani, The Message, ch. 53', ar: 'جعفر السبحاني، الرسالة، الفصل ٥٣' };
 
 export const narration: NarrationLine[] = [
   {
@@ -136,6 +142,71 @@ export const narration: NarrationLine[] = [
       en: 'Here the first chapter ends, and your journey with Abu Dharr goes on.',
     },
   },
+  // ---------------------------------------------------------------- chapter 2: Medina
+  {
+    id: 'm01', sourced: true, sources: [AL_FAQIH_2],
+    text: {
+      ar: 'بقيَ أبو ذرّ في قومِه زمنًا طويلًا يُعلّمُهم، ولم يشهدْ بدرًا ولا أُحُدًا ولا الخندق. ثم قدمَ المدينةَ ليصحبَ النبيَّ ويأخذَ عنه العلمَ والحكمة.',
+      en: 'Abu Dharr stayed among his people for a long time, teaching them; he was not at Badr, Uhud or the Trench. Then he came to Medina to be near the Prophet and to learn knowledge and wisdom from him.',
+    },
+  },
+  {
+    id: 'm02', sourced: true, sources: [KHOEI, AL_FAQIH_2],
+    text: {
+      ar: 'طلبَ أبو ذرّ رسولَ الله، فقيل إنّه في بستانٍ، فوجدَه نائمًا، فأعظمَه أن يوقظَه. فكسرَ عودًا يابسًا ليعرفَ أنائمٌ هو أم مستيقظ. فرفعَ رسولُ الله رأسَه وقال: يا أبا ذرّ، أما علمتَ أنّي أرى أعمالَكم في منامي كما أراكم في يقظتي؟ إنّ عينيَّ تنامان ولا ينامُ قلبي.',
+      en: 'Abu Dharr looked for the Messenger of God and was told he was in a garden. He found him asleep and held him in too much awe to wake him, so he snapped a dry stick to learn whether he slept. The Prophet raised his head and said: "Abu Dharr, do you not know that I see your deeds in my sleep as I see you awake? My eyes sleep, but my heart does not."',
+    },
+  },
+  {
+    id: 'm03', sourced: true, sources: [WARRAM, AL_FAQIH_2],
+    text: {
+      ar: 'قال أبو ذرّ: دخلتُ يومًا على رسولِ الله في مسجدِه، فلم أرَ فيه أحدًا إلّا هو وعليٌّ جالسٌ إلى جانبه، فاغتنمتُ خلوةَ المسجد فقلت: أوصِني بوصيّةٍ ينفعُني اللهُ بها. فقال: نعم، وأكرِمْ بك يا أبا ذرّ، إنّك منّا أهلَ البيت.',
+      en: 'Abu Dharr said: One day I entered the mosque and found no one there but the Messenger of God, with Ali sitting beside him. I seized the quiet and said: "Give me counsel by which God will benefit me." He said: "Yes, and how honoured you are, Abu Dharr. You are one of us, the People of the House."',
+    },
+  },
+  {
+    id: 'm04', sourced: true, sources: [WARRAM],
+    text: {
+      ar: 'يا أبا ذرّ، اعبدِ اللهَ كأنّك تراه، فإن كنتَ لا تراه فإنّه يراك. يا أبا ذرّ، اغتنمْ خمسًا قبلَ خمس: شبابَك قبلَ هرمِك، وصحّتَك قبلَ سقمِك، وغناك قبلَ فقرِك، وفراغَك قبلَ شغلِك، وحياتَك قبلَ موتِك.',
+      en: '"Abu Dharr, worship God as though you see Him; for if you do not see Him, He sees you. Abu Dharr, take five before five: your youth before your old age, your health before your illness, your wealth before your poverty, your free time before you are busy, and your life before your death."',
+    },
+  },
+  {
+    id: 'm05', sourced: true, sources: [MAANI, AL_FAQIH_2],
+    text: {
+      ar: 'وقال فيه رسولُ الله: ما أظلّتِ الخضراءُ ولا أقلّتِ الغبراءُ من ذي لهجةٍ أصدقَ من أبي ذرّ. وقد سُئلَ الإمامُ الصادقُ عن هذا الحديث فصدّقه.',
+      en: 'And the Messenger of God said of him: "The sky has not shaded, nor the earth carried, anyone more truthful in speech than Abu Dharr." Imam al-Sadiq was asked about these words, and confirmed them.',
+    },
+  },
+  // ---------------------------------------------------------------- chapter 3: the road to Tabuk
+  {
+    id: 't01', sourced: true, sources: [MESSAGE, AL_FAQIH],
+    text: {
+      ar: 'في السنةِ التاسعة للهجرة خرجَ النبيُّ إلى تبوك في حرٍّ شديد وطريقٍ طويل، وتخلّفَ بعضُ الناسِ عن المسير. وخرجَ أبو ذرّ مع الجيش على بعيرِه.',
+      en: 'In the ninth year after the Hijra the Prophet set out for Tabuk, through fierce heat and a long road, and some people stayed behind. Abu Dharr set out with the army on his camel.',
+    },
+  },
+  {
+    id: 't02', sourced: true, sources: [KHARAIJ, AL_FAQIH],
+    text: {
+      ar: 'فتخلّفَ بأبي ذرّ جملُه، فعالجَه حتى أعياه أمرُه، فأخذَ رحلَه عنه وحملَه على ظهرِه، وتابعَ سيرَه ماشيًا على قدميه.',
+      en: 'His camel fell behind and he struggled with it until it wore him out; so he took his baggage off it, carried it on his back, and went on walking on foot.',
+    },
+  },
+  {
+    id: 't03', sourced: true, sources: [KHARAIJ, AL_FAQIH],
+    text: {
+      ar: 'ونظرَ الناسُ فقالوا: يا رسولَ الله، هذا رجلٌ على الطريقِ وحدَه. فقال: كُنْ أبا ذرّ. فلمّا تأمّلوه قالوا: هو أبو ذرّ. فقال رسولُ الله: يرحمُ اللهُ أبا ذرّ، يمشي وحدَه، ويموتُ وحدَه، ويُبعثُ وحدَه.',
+      en: 'People looked and said: "Messenger of God, there is a man on the road, alone." He said: "Let it be Abu Dharr." When they looked closer they said: "It is Abu Dharr." The Messenger of God said: "May God have mercy on Abu Dharr. He walks alone, he will die alone, and he will be raised alone."',
+    },
+  },
+  {
+    id: 't04', sourced: true, sources: [MESSAGE],
+    text: {
+      ar: 'وبلغَ الجيشُ تبوك، فلم يلقَ جيشًا للروم ولم يقعْ قتال، ثم عادَ إلى المدينة.',
+      en: 'The army reached Tabuk. It met no Roman army, no battle was fought, and it returned to Medina.',
+    },
+  },
 ];
 
 /** Good deeds the player can do. Each shows a Qur'an verse; the game never claims to know God's actual reward. */
@@ -191,6 +262,30 @@ export const deeds: Deed[] = [
     ref: { ar: 'سورة البقرة ١٥٣', en: "Qur'an 2:153" },
   },
   {
+    id: 'irrigate', hasanat: 20,
+    title: { ar: 'سقيتَ بستانَ نخيلٍ لأهل المدينة', en: 'You watered a palm garden for the people of Medina' },
+    verse: { ar: '﴿وَجَعَلْنَا مِنَ الْمَاءِ كُلَّ شَيْءٍ حَيٍّ﴾', en: '"And We made every living thing from water."' },
+    ref: { ar: 'سورة الأنبياء ٣٠', en: "Qur'an 21:30" },
+  },
+  {
+    id: 'feed-poor', hasanat: 20,
+    title: { ar: 'حملتَ التمرَ إلى فقراء المسجد', en: 'You carried dates to the poor at the mosque' },
+    verse: { ar: '﴿وَيُطْعِمُونَ الطَّعَامَ عَلَى حُبِّهِ مِسْكِينًا وَيَتِيمًا وَأَسِيرًا﴾', en: '"And they give food, despite their love for it, to the poor, the orphan and the captive."' },
+    ref: { ar: 'سورة الإنسان ٨', en: "Qur'an 76:8" },
+  },
+  {
+    id: 'share-water', hasanat: 30,
+    title: { ar: 'آثرتَ أبا ذرّ بالماء في الحرّ', en: 'You gave Abu Dharr your water in the heat' },
+    verse: { ar: '﴿وَيُؤْثِرُونَ عَلَى أَنفُسِهِمْ وَلَوْ كَانَ بِهِمْ خَصَاصَةٌ﴾', en: '"And they prefer others over themselves, even when they are in need."' },
+    ref: { ar: 'سورة الحشر ٩', en: "Qur'an 59:9" },
+  },
+  {
+    id: 'carry-load', hasanat: 30,
+    title: { ar: 'حملتَ بعضَ متاعِ أبي ذرّ', en: 'You carried part of Abu Dharr’s load' },
+    verse: { ar: '﴿وَتَعَاوَنُوا عَلَى الْبِرِّ وَالتَّقْوَى﴾', en: '"Help one another in goodness and piety."' },
+    ref: { ar: 'سورة المائدة ٢', en: "Qur'an 5:2" },
+  },
+  {
     id: 'shield', hasanat: 30,
     title: { ar: 'وقفتَ دونَ أبي ذرّ حين ثار عليه القوم', en: 'You stood by Abu Dharr when the crowd rose against him' },
     verse: { ar: '﴿وَمَا لَكُمْ لَا تُقَاتِلُونَ فِي سَبِيلِ اللَّهِ وَالْمُسْتَضْعَفِينَ﴾', en: '"And why should you not strive in the cause of God and of the oppressed?"' },
@@ -210,4 +305,72 @@ export const objectives = {
   follow: { ar: 'اتبعْ عليًّا من بعيد. إذا توقّف كأنّه يريق الماء فقِفْ واختبئ. لا تقترب كثيرًا ولا تتأخّر.', en: 'Follow Ali at a distance. If he stops as if pouring out water, stop and take cover. Don’t get too close or fall behind.' },
   shield: { ar: 'القومُ يثورون على أبي ذرّ. قِفْ دونه وادفعهم عنه حتى يصل العبّاس.', en: 'The crowd is rising against Abu Dharr. Stand by him and push them back until al-Abbas arrives.' },
   done: { ar: 'اكتمل الفصل الأوّل.', en: 'Chapter one complete.' },
+  medinaArrive: { ar: 'ساعدْ أهلَ المدينة: اسقِ بستانَ النخيل، واحملِ التمرَ إلى فقراء المسجد.', en: 'Help the people of Medina: water the palm garden and carry dates to the poor at the mosque.' },
+  medinaGarden: { ar: 'أبو ذرّ يبحثُ عن النبيّ. قيل إنّه في البستان الشماليّ.', en: 'Abu Dharr is looking for the Prophet. He was told he is in the northern garden.' },
+  medinaMosque: { ar: 'في الصباح: ادخلْ مع أبي ذرّ إلى المسجد.', en: 'Morning: go with Abu Dharr into the mosque.' },
+  tabukMarch: { ar: 'سِرْ مع أبي ذرّ خلف الجيش. راقبِ الماءَ والحرّ، واملأ القِربَ من الآبار.', en: 'March behind the army with Abu Dharr. Watch your water and the heat; refill at the wells.' },
+  tabukStorm: { ar: 'عاصفةٌ رملية! ابقَ قريبًا من أبي ذرّ ولا تضلّ الطريق.', en: 'Sandstorm! Stay close to Abu Dharr and don’t lose the road.' },
+  tabukCarry: { ar: 'تعبَ بعيرُ أبي ذرّ. احملْ بعضَ متاعه وأدركا الجيش.', en: 'Abu Dharr’s camel is worn out. Carry part of his load and catch up with the army.' },
+  medinaDone: { ar: 'اكتمل فصل المدينة.', en: 'The Medina chapter is complete.' },
+  tabukDone: { ar: 'اكتمل فصل طريق تبوك.', en: 'The road to Tabuk is complete.' },
 } satisfies Record<string, L>;
+
+/** Abu Dharr's path, in order. Positions are latitude/longitude for the journey map. */
+export interface JourneyStop {
+  id: string;
+  chapter: number;
+  title: L;
+  place: L;
+  date: L;
+  summary: L;
+  lat: number;
+  lon: number;
+  playable: boolean;
+  /** Reported tradition rather than a sourced event. */
+  tradition?: boolean;
+}
+
+export const journey: JourneyStop[] = [
+  {
+    id: 'seeker', chapter: 1, playable: true, lat: 22.6, lon: 39.2,
+    title: { ar: 'الباحث عن الحقّ', en: 'The Seeker' },
+    place: { ar: 'ديار غِفار ← مكّة ← غِفار', en: 'Ghifar → Mecca → Ghifar' },
+    date: { ar: 'نحو ٦١٠–٦١٣ م', en: 'c. 610–613 CE' },
+    summary: { ar: 'يسمع بالنبيّ، فيقصد مكّة، ويستضيفه عليّ ثلاث ليال، فيُسلم ويعلن إسلامه عند البيت، ثم يدعو قومه.', en: 'He hears of the Prophet, travels to Mecca, is Ali’s guest for three nights, accepts Islam and proclaims it at the House, then calls his people.' },
+  },
+  {
+    id: 'medina', chapter: 2, playable: true, lat: 24.47, lon: 39.61,
+    title: { ar: 'في صحبة النبيّ', en: 'Near the Prophet' },
+    place: { ar: 'المدينة', en: 'Medina' },
+    date: { ar: 'بعد الخندق، نحو ٦٢٧–٦٣٠ م', en: 'after the Trench, c. 627–630 CE' },
+    summary: { ar: 'يلازم النبيّ ويتعلّم منه: قصة البستان، والوصيّة في المسجد: «إنّك منّا أهلَ البيت».', en: 'He stays close to the Prophet and learns: the garden, and the counsel in the mosque: “You are one of us, the People of the House.”' },
+  },
+  {
+    id: 'tabuk', chapter: 3, playable: true, lat: 28.38, lon: 36.57,
+    title: { ar: 'وحيدًا على طريق تبوك', en: 'Alone on the Road to Tabuk' },
+    place: { ar: 'طريق تبوك', en: 'The road to Tabuk' },
+    date: { ar: '٩ هـ / ٦٣٠ م', en: '9 AH / 630 CE' },
+    summary: { ar: 'يعيا بعيرُه فيحمل متاعه ويمشي وحده، فيقول النبيّ: «يمشي وحده، ويموت وحده».', en: 'His camel gives out, he carries his load and walks alone, and the Prophet says: “He walks alone, and will die alone.”' },
+  },
+  {
+    id: 'sham', chapter: 4, playable: false, lat: 33.51, lon: 36.29,
+    title: { ar: 'صوتُ الفقراء في الشام', en: 'A Voice for the Poor in Sham' },
+    place: { ar: 'دمشق', en: 'Damascus' },
+    date: { ar: 'نحو ٦٤٥–٦٥١ م', en: 'c. 645–651 CE' },
+    summary: { ar: 'ينكر كنز الذهب والفضة، ويردّ عطايا معاوية، فيكتب معاوية إلى عثمان.', en: 'He speaks against hoarding gold and silver and refuses Mu‘awiya’s gifts; Mu‘awiya writes to ‘Uthman.' },
+  },
+  {
+    id: 'amil', chapter: 5, playable: false, tradition: true, lat: 33.3, lon: 35.4,
+    title: { ar: 'في قرى جبل عامل', en: 'In the Villages of Jabal Amil' },
+    place: { ar: 'الصرفند وميس الجبل', en: 'Sarafand and Mays al-Jabal' },
+    date: { ar: 'نحو ٦٤٥–٦٥١ م (رواية متوارثة)', en: 'c. 645–651 CE (reported tradition)' },
+    summary: { ar: 'يتوارث أهل جبل عامل أنّ تشيّعهم كان على يده، وله مقامان في الصرفند وميس.', en: 'The people of Jabal Amil hold that their love for the Ahl al-Bayt began with him; shrines at Sarafand and Mays carry his name.' },
+  },
+  {
+    id: 'rabadhah', chapter: 6, playable: false, lat: 24.64, lon: 41.3,
+    title: { ar: 'الوداع في الربذة', en: 'Farewell at al-Rabadhah' },
+    place: { ar: 'الربذة', en: 'al-Rabadhah' },
+    date: { ar: 'نحو ٦٥١–٦٥٣ م', en: 'c. 651–653 CE' },
+    summary: { ar: 'يودّعه عليّ والحسن والحسين وعقيل وعمّار، ويموت وحيدًا، فيدفنه مالك الأشتر وأصحابه.', en: 'Ali, al-Hasan, al-Husayn, ‘Aqil and ‘Ammar bid him farewell; he dies alone, and Malik al-Ashtar and his companions bury him.' },
+  },
+];

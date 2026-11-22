@@ -88,3 +88,45 @@ html[lang='ar'] .fade p { font-family: var(--font-ar-display); }
 #hud .hud-right { align-items: flex-end; }
 
 #modal .panel { max-height: calc(100dvh - 32px); overflow-y: auto; }
+.thirst {
+  position: fixed; bottom: max(150px, calc(env(safe-area-inset-bottom) + 140px)); left: 50%; transform: translateX(-50%); width: min(300px, 70vw); height: 10px;
+  border-radius: 999px; background: rgba(0, 0, 0, 0.45); border: 1px solid rgba(143, 211, 255, 0.5); pointer-events: none;
+}
+.thirst span { display: block; height: 100%; border-radius: 999px; background: #8fd3ff; transition: width 0.3s; }
+.thirst.warn span { background: var(--danger); }
+.thirst em { position: absolute; bottom: 14px; left: 0; right: 0; text-align: center; font-style: normal; font-size: 0.9rem; color: var(--ink); text-shadow: 0 1px 4px #000; }
+
+/* Journey map. */
+.jmap { position: fixed; inset: 0; overflow-y: auto; background: radial-gradient(900px 500px at 50% 0%, #3a2614, #1a120b 70%); padding: max(14px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 24px max(16px, env(safe-area-inset-left)); }
+.jmap-head { display: flex; gap: 14px; align-items: center; max-width: 1100px; margin: 0 auto 12px; }
+.jmap-head h2 { color: var(--gold); font-size: clamp(1.6rem, 4vw, 2.3rem); }
+.jmap-head p { color: var(--ink-dim); margin: 2px 0 0; }
+.jmap-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 380px); gap: 16px; max-width: 1100px; margin: 0 auto; align-items: start; }
+.jmap-svg { width: 100%; max-height: calc(100dvh - 140px); border-radius: 18px; border: 1px solid var(--panel-edge); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45); background: #e3c894; }
+.jmap-svg .sea { fill: rgba(30, 60, 70, 0.55); font: italic 600 15px var(--font-en-display); }
+html[lang='ar'] .jmap-svg .sea, html[lang='ar'] .jmap-svg .region, html[lang='ar'] .jmap-svg .city { font-family: var(--font-ar-display); }
+.jmap-svg .region { fill: rgba(90, 55, 25, 0.4); font: 700 22px var(--font-en-display); letter-spacing: 0.25em; }
+.jmap-svg .city { fill: #3a2a1a; font: 600 15px var(--font-en); }
+.route-bg { fill: none; stroke: rgba(255, 250, 235, 0.7); stroke-width: 7; stroke-linejoin: round; }
+.route { fill: none; stroke: #8a3b2a; stroke-width: 3; stroke-dasharray: 10 7; stroke-linejoin: round; animation: march 1.6s linear infinite; }
+@keyframes march { to { stroke-dashoffset: -34; } }
+.stop { cursor: pointer; }
+.stop circle { fill: #f6ead4; stroke: #8a3b2a; stroke-width: 3; transition: r 0.2s; }
+.stop text { fill: #5a2a1a; font: 700 17px var(--font-en); pointer-events: none; }
+.stop.open circle { fill: #e7c27d; }
+.stop.done circle { fill: #b6e3a8; stroke: #3f6a34; }
+.stop.soon { opacity: 0.6; }
+.stop.sel circle { stroke: #1a120b; stroke-width: 4; r: 21; }
+.stop:focus-visible circle { stroke: var(--accent); }
+.traveller { transition: transform 1.2s cubic-bezier(0.4, 0, 0.2, 1); pointer-events: none; }
+.jmap-card { background: rgba(28, 18, 11, 0.9); border: 1px solid var(--panel-edge); border-radius: 18px; padding: 18px 20px; position: sticky; top: 12px; }
+.jmap-card h3 { color: var(--gold); font-size: 1.6rem; margin: 4px 0; }
+.jmap-card .place { color: var(--ink); font-weight: 600; margin: 0 0 6px; }
+.jmap-card p { color: var(--ink-dim); line-height: 1.7; }
+.jmap-card .btn { width: 100%; margin-top: 8px; min-height: 50px; }
+.badge-trad { display: inline-block; font-size: 0.8rem; color: #cdb6ff; border: 1px solid rgba(205, 182, 255, 0.5); border-radius: 999px; padding: 0.15em 0.7em; }
+@media (max-width: 760px) {
+  .jmap-body { grid-template-columns: 1fr; }
+  .jmap-svg { max-height: 62dvh; }
+  .jmap-card { position: static; }
+}

@@ -621,3 +621,299 @@ export function buildMeccaValley(): MeccaValley {
     update() {},
   };
 }
+
+// ====================================================================== shared props
+function palm(r: () => number, h = 6 + r() * 4) {
+  const p = new THREE.Group();
+  const trunkMat = mat('#6b5236', 1);
+  const segs = 7;
+  const lean = (r() - 0.5) * 0.25;
+  for (let i = 0; i < segs; i++) {
+    const s = new THREE.Mesh(new THREE.CylinderGeometry(0.17 - i * 0.008, 0.2 - i * 0.008, h / segs, 7), trunkMat);
+    s.position.set(lean * i * 0.6, h / segs / 2 + (i * h) / segs, 0);
+    p.add(s);
+  }
+  const top = new THREE.Vector3(lean * segs * 0.6, h, 0);
+  const frondMat = new THREE.MeshStandardMaterial({ color: '#5f7a3a', roughness: 1, side: THREE.DoubleSide });
+  for (let i = 0; i < 10; i++) {
+    const geo = new THREE.PlaneGeometry(0.5, 3.2, 1, 6);
+    const pos = geo.attributes.position!;
+    for (let k = 0; k < pos.count; k++) {
+      const y = pos.getY(k) + 1.6;
+      pos.setZ(k, -0.12 * y * y);
+      pos.setX(k, pos.getX(k) * (1 - y / 3.6));
+    }
+    geo.translate(0, 1.6, 0);
+    const f = new THREE.Mesh(geo, frondMat);
+    f.position.copy(top);
+    f.rotation.set(-1.1 + r() * 0.3, (i / 10) * Math.PI * 2, 0, 'YXZ');
+    p.add(f);
+  }
+  return shadowed(p);
+}
+
+function blackRocks(g: THREE.Group, r: () => number, cx: number, cz: number, spread: number, n: number) {
+  const m = mat('#2b2622', 1);
+  for (let i = 0; i < n; i++) {
+    const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.5 + r() * 1.6), m);
+    rock.position.set(cx + (r() - 0.5) * spread, 0.2, cz + (r() - 0.5) * spread);
+    rock.rotation.set(r(), r(), r());
+    rock.scale.y = 0.5;
+    g.add(shadowed(rock));
+  }
+}
+
+// ====================================================================== Medina
+export interface MedinaScene extends SceneBase {
+  gates: THREE.Vector3[];
+  openGate(i: number): void;
+}
+
+export function buildMedina(): MedinaScene {
+  const g = new THREE.Group();
+  const colliders: Collider[] = [];
+  const r = rng(23);
+  const ground = addGround(g, '#c9b089', 50, 120);
+  const block = (x: number, z: number, w: number, d: number) => colliders.push({ min: new THREE.Vector2(x - w / 2, z - d / 2), max: new THREE.Vector2(x + w / 2, z + d / 2) });
+  // Mount Uhud to the north, a long red-brown ridge; low hills elsewhere.
+  const uhud = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 3), new THREE.MeshStandardMaterial({ color: '#8a4f34', roughness: 1, flatShading: true }));
+  uhud.scale.set(160, 45, 40);
+  uhud.position.set(0, -6, -230);
+  g.add(uhud);
+  addHills(g, r, '#7a6048', 200, 18);
+  blackRocks(g, r, -60, 20, 40, 30);
+  blackRocks(g, r, 70, -10, 40, 30);
+
+  // The Prophet's mosque: mud-brick walls, an open court, a roof of palm fronds on palm-trunk pillars.
+  const brick = new THREE.MeshStandardMaterial({ map: plaster('#a88a64', 6), roughness: 1 });
+  const W = 34, D = 30, H = 2.6, cx = 0, cz = -10;
+  const wall = (x: number, z: number, w: number, d: number) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, H, d), brick);
+    m.position.set(x, H / 2, z);
+    g.add(shadowed(m));
+    block(x, z, w, d);
+  };
+  // North wall (back), east and west walls with doorways, south wall with a wide door.
+  wall(cx, cz - D / 2, W, 0.7);
+  wall(cx - W / 2, cz - 6, 0.7, D - 12);
+  wall(cx - W / 2, cz + D / 2 - 2.5, 0.7, 5);
+  wall(cx + W / 2, cz - 6, 0.7, D - 12);
+  wall(cx + W / 2, cz + D / 2 - 2.5, 0.7, 5);
+  wall(cx - 10, cz + D / 2, W / 2 - 3, 0.7);
+  wall(cx + 10, cz + D / 2, W / 2 - 3, 0.7);
+  const trunk = mat('#6b5236', 1);
+  const fronds = new THREE.Mesh(new THREE.BoxGeometry(W - 1, 0.18, 8), mat('#8a7a4a', 1));
+  fronds.position.set(cx, H + 0.4, cz - D / 2 + 4.5);
+  g.add(shadowed(fronds));
+  for (let i = 0; i < 8; i++) {
+    for (const row of [0, 1]) {
+      const col = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.2, H + 0.4, 7), trunk);
+      col.position.set(cx - W / 2 + 2.5 + i * ((W - 5) / 7), (H + 0.4) / 2, cz - D / 2 + 2 + row * 5);
+      g.add(shadowed(col));
+    }
+  }
+  // The shaded platform at the back, where the poor of the community stayed.
+  const suffa = new THREE.Mesh(new THREE.BoxGeometry(10, 0.35, 4), mat('#9c8262', 1));
+  suffa.position.set(cx + 10, 0.17, cz - D / 2 + 2.4);
+  g.add(shadowed(suffa));
+
+  // Houses around the mosque.
+  const colors = ['#b8976f', '#a98a66', '#bfa07a'];
+  for (let i = 0; i < 26; i++) {
+    const a = r() * Math.PI * 2, d = 32 + r() * 34;
+    const x = Math.cos(a) * d, z = cz + Math.sin(a) * d;
+    if (z > 18 && Math.abs(x) < 10) continue; // keep the southern approach clear
+    if (x > 24 && x < 60 && z > -60 && z < -20) continue; // the north-east garden
+    const w = 5 + r() * 3, dd = 5 + r() * 3, h = 3 + r() * 1.5;
+    const house = new THREE.Mesh(new THREE.BoxGeometry(w, h, dd), new THREE.MeshStandardMaterial({ map: plaster(colors[i % 3]!, i), roughness: 1 }));
+    house.position.set(x, h / 2, z);
+    g.add(shadowed(house));
+    block(x, z, w, dd);
+  }
+  // Clan towers (atam).
+  for (const [x, z] of [[-48, -40], [52, 10], [-30, 40]] as const) {
+    const t = new THREE.Mesh(new THREE.BoxGeometry(5, 9, 5), new THREE.MeshStandardMaterial({ map: stoneBlocks(6), color: '#8d7a62', roughness: 1 }));
+    t.position.set(x, 4.5, z);
+    g.add(shadowed(t));
+    block(x, z, 5, 5);
+  }
+  // Palm groves everywhere outside the town core.
+  for (let i = 0; i < 70; i++) {
+    const a = r() * Math.PI * 2, d = 28 + r() * 70;
+    const x = Math.cos(a) * d, z = cz + Math.sin(a) * d;
+    if (z > 18 && Math.abs(x) < 8) continue;
+    const p = palm(r);
+    p.position.set(x, 0, z);
+    g.add(p);
+  }
+  // The south garden: three irrigation channels with wooden gates.
+  const water = new THREE.MeshStandardMaterial({ color: '#3b6a74', roughness: 0.15 });
+  const channels: THREE.Mesh[] = [];
+  const gates: THREE.Vector3[] = [];
+  const gateMeshes: THREE.Mesh[] = [];
+  for (let i = 0; i < 3; i++) {
+    const x = -26 + i * 6;
+    const ch = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.05, 16), mat('#6a5640'));
+    ch.position.set(x, 0.02, 34);
+    g.add(ch);
+    const w = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.04, 16), water);
+    w.position.set(x, 0.04, 34);
+    w.scale.z = 0.02;
+    g.add(w);
+    channels.push(w);
+    const gate = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.7, 0.12), mat('#5a4029', 0.9, wood()));
+    gate.position.set(x, 0.35, 25.6);
+    g.add(shadowed(gate));
+    gateMeshes.push(gate);
+    gates.push(v3(x, 0, 24.6));
+    for (let k = 0; k < 4; k++) {
+      const p = palm(r, 4 + r() * 2);
+      p.position.set(x + (k % 2 ? 1.6 : -1.6), 0, 29 + k * 3);
+      g.add(p);
+    }
+  }
+  // The north-east garden, where the Prophet rests under a palm.
+  for (let i = 0; i < 12; i++) {
+    const p = palm(r);
+    p.position.set(36 + (i % 4) * 5 + r() * 2, 0, -46 + Math.floor(i / 4) * 6 + r() * 2);
+    g.add(p);
+  }
+  const lowWall = new THREE.Mesh(new THREE.BoxGeometry(26, 1.2, 0.5), brick);
+  lowWall.position.set(44, 0.6, -28);
+  g.add(shadowed(lowWall));
+  block(48, -28, 18, 0.6);
+
+  return {
+    group: g,
+    colliders,
+    ground,
+    gates,
+    points: {
+      arrive: v3(0, 0, 60),
+      dates: v3(12, 0, 20),
+      suffa: v3(10, 0, -21.5),
+      northGarden: v3(40, 0, -32),
+      prophetRest: v3(44, 0, -40),
+      mosqueDoor: v3(0, 0, 7),
+      prophetSeat: v3(-4, 0, -21.8),
+      aliSeat: v3(-2.4, 0, -21.4),
+      abuDharrSeat: v3(-3.2, 0, -18.6),
+    },
+    openGate(i: number) {
+      gateMeshes[i]!.position.y = 1.1;
+      channels[i]!.scale.z = 1;
+    },
+    update() {},
+  };
+}
+
+// ====================================================================== the road to Tabuk
+export interface TabukScene extends SceneBase {
+  path: THREE.Vector3[];
+  wells: THREE.Vector3[];
+  setStorm(amount: number): void;
+  dustAt(p: THREE.Vector3): void;
+  armyCamp: THREE.Vector3;
+}
+
+export function buildTabuk(): TabukScene {
+  const g = new THREE.Group();
+  const colliders: Collider[] = [];
+  const r = rng(31);
+  const ground = addGround(g, '#d7a873', 70, 260);
+  // Sandstone mesas and black basalt hills along the way.
+  const sand = new THREE.MeshStandardMaterial({ color: '#b9773f', roughness: 1, flatShading: true });
+  const basalt = new THREE.MeshStandardMaterial({ color: '#3a302a', roughness: 1, flatShading: true });
+  for (let i = 0; i < 40; i++) {
+    const side = i % 2 ? 1 : -1;
+    const z = 20 - i * 12 - r() * 6;
+    const x = side * (25 + r() * 60);
+    const mesa = new THREE.Mesh(new THREE.CylinderGeometry(6 + r() * 10, 9 + r() * 12, 10 + r() * 22, 6 + Math.floor(r() * 3)), r() > 0.3 ? sand : basalt);
+    mesa.position.set(x, 4, z);
+    mesa.rotation.y = r() * Math.PI;
+    g.add(shadowed(mesa));
+  }
+  for (let i = 0; i < 60; i++) {
+    const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.4 + r() * 1.3), r() > 0.5 ? basalt : sand);
+    rock.position.set((r() > 0.5 ? 1 : -1) * (4 + r() * 18), 0.2, 10 - r() * 470);
+    rock.rotation.set(r(), r(), r());
+    g.add(shadowed(rock));
+  }
+  // The track: a winding path south to north (−z).
+  const path: THREE.Vector3[] = [];
+  for (let i = 0; i <= 24; i++) path.push(v3(Math.sin(i * 0.55) * 7, 0, 10 - i * 19));
+  const track = mat('#c49565', 1);
+  for (let i = 0; i < path.length - 1; i++) {
+    const a = path[i]!, b = path[i + 1]!;
+    const len = a.distanceTo(b);
+    const seg = new THREE.Mesh(new THREE.PlaneGeometry(3, len + 0.5), track);
+    seg.rotation.x = -Math.PI / 2;
+    seg.rotation.z = -Math.atan2(b.x - a.x, -(b.z - a.z));
+    seg.position.set((a.x + b.x) / 2, 0.025, (a.z + b.z) / 2);
+    seg.receiveShadow = true;
+    g.add(seg);
+  }
+  // Wells along the way.
+  const wells = [path[6]!.clone().add(v3(4, 0, 0)), path[13]!.clone().add(v3(-4, 0, 0)), path[19]!.clone().add(v3(4, 0, 0))];
+  for (const w of wells) {
+    const m = well(false);
+    m.scale.setScalar(0.7);
+    m.position.copy(w);
+    g.add(m);
+    colliders.push({ min: new THREE.Vector2(w.x - 0.9, w.z - 0.9), max: new THREE.Vector2(w.x + 0.9, w.z + 0.9) });
+  }
+  // The army's camp at Tabuk.
+  const armyCamp = path[path.length - 1]!.clone().add(v3(0, 0, -16));
+  for (let i = 0; i < 14; i++) {
+    const t = tent(r, 4, 3);
+    const a = (i / 14) * Math.PI * 2;
+    t.position.set(armyCamp.x + Math.cos(a) * 18, 0, armyCamp.z + Math.sin(a) * 14);
+    t.rotation.y = -a + Math.PI / 2;
+    g.add(t);
+  }
+  for (let i = 0; i < 8; i++) {
+    const c = camel(i % 2 ? '#b38a5a' : '#a07a4e');
+    c.position.set(armyCamp.x - 26 + i * 3, 0, armyCamp.z - 6 + (i % 3));
+    c.rotation.y = Math.PI / 2;
+    g.add(c);
+  }
+  // Blowing sand for the storm.
+  const count = 1500;
+  const geo = new THREE.BufferGeometry();
+  const pos = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    pos[i * 3] = (Math.random() - 0.5) * 60;
+    pos[i * 3 + 1] = Math.random() * 8;
+    pos[i * 3 + 2] = (Math.random() - 0.5) * 60;
+  }
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const dust = new THREE.Points(geo, new THREE.PointsMaterial({ color: '#d9a46a', size: 0.12, transparent: true, opacity: 0, depthWrite: false }));
+  g.add(dust);
+  let storm = 0;
+  return {
+    group: g,
+    colliders,
+    ground,
+    path,
+    wells,
+    armyCamp,
+    points: { start: path[0]!.clone().add(v3(2, 0, 4)), camelFalls: path[11]!.clone() },
+    dustAt(p: THREE.Vector3) {
+      dust.position.set(p.x, 0, p.z);
+    },
+    setStorm(amount: number) {
+      storm = amount;
+      (dust.material as THREE.PointsMaterial).opacity = amount * 0.8;
+    },
+    update(dt: number) {
+      if (storm <= 0) return;
+      const p = geo.attributes.position as THREE.BufferAttribute;
+      for (let i = 0; i < count; i++) {
+        let x = p.getX(i) + dt * 14 * storm;
+        if (x > 30) x -= 60;
+        p.setX(i, x);
+      }
+      p.needsUpdate = true;
+    },
+  };
+}

@@ -9,14 +9,26 @@ import { deeds, hasanatRule, objectives, type L } from '../../../backend/src/jou
 import { Character, LOOKS, type Look } from '../game/character';
 import { Effects, Enemy, Fight, PlayerCombat, statsFor, type CombatEvent } from '../game/combat';
 import { Controls } from '../game/controls';
+import { camel } from './env';
 import type { Collider } from '../game/mecca';
 import { PlayerController } from '../game/player';
 import type { World } from '../game/world';
 import { esc, modal, modalOpen, toast } from '../ui/ui';
-import { buildGhifar, buildMeccaValley, type GhifarScene, type MeccaValley } from './env';
+import { buildGhifar, buildMedina, buildMeccaValley, buildTabuk, type GhifarScene, type MeccaValley, type MedinaScene, type SceneBase, type TabukScene } from './env';
 import type { Narrator } from './narrator';
 
 type Lang = 'ar' | 'en';
+type SceneName = 'ghifar' | 'mecca' | 'medina' | 'tabuk';
+
+/** Chapters finished on this device (for the journey map). */
+export function completedChapters(): Set<string> {
+  try { return new Set(JSON.parse(localStorage.getItem('athar.completed') ?? '[]')); } catch { return new Set(); }
+}
+function markCompleted(id: string) {
+  const done = completedChapters();
+  done.add(id);
+  try { localStorage.setItem('athar.completed', JSON.stringify([...done])); } catch { /* private mode */ }
+}
 interface Interaction {
   pos: () => THREE.Vector3;
   radius: number;
@@ -38,9 +50,13 @@ export class CompanionChapter {
   private me = new PlayerCombat(statsFor({}));
   private effects: Effects;
   private colliders: Collider[] = [];
-  private ghifar: GhifarScene;
-  private mecca: MeccaValley;
-  private scene: 'ghifar' | 'mecca' = 'ghifar';
+  // Scenes are built on first use, so each chapter only builds what it needs.
+  private built: Partial<Record<SceneName, SceneBase>> = {};
+  private get ghifar() { return (this.built.ghifar ??= buildGhifar()) as GhifarScene; }
+  private get mecca() { return (this.built.mecca ??= buildMeccaValley()) as MeccaValley; }
+  private get medina() { return (this.built.medina ??= buildMedina()) as MedinaScene; }
+  private get tabuk() { return (this.built.tabuk ??= buildTabuk()) as TabukScene; }
+  private scene: SceneName = 'ghifar';
   private abuDharr: Character;
   private unays: Character;
   private actors: Character[] = [];
@@ -60,6 +76,8 @@ export class CompanionChapter {
   private adSpeed = 1.7;
   /** Test hook: speeds up game time (automated walkthroughs on slow software rendering). */
   timeScale = 1;
+  /** Extra slow-down from exhaustion (Tabuk heat). */
+  private slow = 1;
 
   constructor(
     private readonly world: World,
@@ -68,14 +86,13 @@ export class CompanionChapter {
     private readonly lang: () => Lang,
     private readonly look: Look,
     private readonly onExit: () => void,
+    private readonly chapterId: string = 'seeker',
   ) {
-    this.ghifar = buildGhifar();
-    this.mecca = buildMeccaValley();
     this.buildHud();
     const me = new Character(look);
     me.equipStaff();
     world.scene.add(me.root);
-    this.controls = new Controls(world.canvas, world.camera, this.ghifar.ground, hud);
+    this.controls = new Controls(world.canvas, world.camera, this.sceneOf(this.firstScene()).ground, hud);
     this.player = new PlayerController(me, this.controls, world.camera, this.colliders);
     this.controls.on('interact', () => void this.interact());
     this.controls.on('attack', () => this.attack());
@@ -116,6 +133,7 @@ export class CompanionChapter {
         </div>
       </div>
       <div class="meter" hidden><span></span><em></em></div>
+      <div class="thirst" hidden><span></span><em></em></div>
       <button class="prompt-chip" hidden></button>
       <div class="cine-bars" hidden><i></i><i></i></div>
       <div class="fade" hidden></div>`;
@@ -241,10 +259,18 @@ export class CompanionChapter {
   }
 
   // ------------------------------------------------------------------ scene switching
-  private useScene(name: 'ghifar' | 'mecca', spawn: THREE.Vector3, facing = Math.PI) {
+  private firstScene(): SceneName {
+    return ({ seeker: 'ghifar', medina: 'medina', tabuk: 'tabuk' } as Record<string, SceneName>)[this.chapterId] ?? 'ghifar';
+  }
+
+  private sceneOf(name: SceneName): SceneBase {
+    return { ghifar: () => this.ghifar, mecca: () => this.mecca, medina: () => this.medina, tabuk: () => this.tabuk }[name]();
+  }
+
+  private useScene(name: SceneName, spawn: THREE.Vector3, facing = Math.PI) {
     this.scene = name;
-    this.world.scene.remove(this.ghifar.group, this.mecca.group);
-    const s = name === 'ghifar' ? this.ghifar : this.mecca;
+    for (const b of Object.values(this.built)) this.world.scene.remove(b.group);
+    const s = this.sceneOf(name);
     this.world.scene.add(s.group);
     this.colliders.length = 0;
     this.colliders.push(...s.colliders);
@@ -257,6 +283,8 @@ export class CompanionChapter {
 
   // ------------------------------------------------------------------ the story
   async start() {
+    if (this.chapterId === 'medina') return this.medinaChapter();
+    if (this.chapterId === 'tabuk') return this.tabukChapter();
     this.world.setTimeOfDay('day');
     this.useScene('ghifar', this.ghifar.points.spawn!);
     this.place(this.abuDharr, this.ghifar.points.abuDharr!, 0);
@@ -891,6 +919,7 @@ export class CompanionChapter {
     this.setObjective(objectives.done);
     await this.narrator.say('n16');
     void listeners;
+    markCompleted('seeker');
     const ar = this.lang() === 'ar';
     const id = await modal({
       eyebrow: ar ? 'الفصل الأوّل' : 'Chapter one',
@@ -900,12 +929,319 @@ export class CompanionChapter {
         <p class="note">${ar ? 'الفصل التالي: المدينة — بناء المسجد مع الصحابة.' : 'Next chapter: Medina — building the mosque with the companions.'}</p>`,
       actions: [
         { id: 'replay', label: ar ? 'أعد الفصل' : 'Replay chapter' },
-        { id: 'exit', label: ar ? 'القائمة الرئيسية' : 'Main menu', primary: true },
+        { id: 'exit', label: ar ? 'خريطة الرحلة' : 'Journey map', primary: true },
       ],
       className: 'end-modal',
     });
     this.dispose();
     if (id === 'replay') location.reload();
+    else this.onExit();
+  }
+
+  // ================================================================== chapter 2: Medina
+  private async medinaChapter() {
+    const m = this.medina;
+    const ar = () => this.lang() === 'ar';
+    const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
+    this.world.setTimeOfDay('day');
+    this.useScene('medina', m.points.arrive!, Math.PI);
+    this.place(this.abuDharr, m.points.arrive!.clone().add(V(1.5, 0, -1.5)), Math.PI);
+    this.narrator.preload(['m01', 'm02']);
+    await this.fade(false, 1200);
+    this.cine(true);
+    this.shot(m.points.arrive!.clone().add(V(8, 7, 10)), V(0, 2, -6));
+    await this.narrator.say('m01');
+    this.cine(false);
+    this.adTarget = m.points.mosqueDoor!.clone().add(V(2.5, 0, 3));
+    this.adSpeed = 1.6;
+    this.setObjective(objectives.medinaArrive);
+
+    // The poor of the community, sitting in the shade at the back of the mosque.
+    const poor = [0, 1, 2].map((i) => {
+      const c = this.actor([LOOKS.wayfarer!, LOOKS.elder!, LOOKS.companion2!][i]!);
+      this.place(c, m.points.suffa!.clone().add(V(-2 + i * 2, 0.35, -0.8)), 0);
+      c.setAnim('sit');
+      return c;
+    });
+    const basket = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.3, 0.45, 12), new THREE.MeshStandardMaterial({ color: '#8a6a3a', roughness: 1 }));
+    basket.position.copy(m.points.dates!).setY(0.22);
+    m.group.add(basket);
+    let opened = 0;
+    await new Promise<void>((resolve) => {
+      const check = () => {
+        if (this.done.has('irrigate') && this.done.has('feed-poor')) resolve();
+      };
+      m.gates.forEach((gp, i) => {
+        let open = false;
+        this.interactions.push({
+          pos: () => gp, radius: 1.8, when: () => !open,
+          label: () => (ar() ? 'افتح بوّابة الساقية' : 'Open the channel gate'),
+          run: () => {
+            open = true;
+            m.openGate(i);
+            this.effects.burst(gp.clone().setY(0.5), '#8fd3ff', 0.6);
+            if (++opened >= 3) {
+              this.deed('irrigate');
+              setTimeout(check, 50);
+            } else toast(`${opened}/3`);
+          },
+        });
+      });
+      this.interactions.push(
+        {
+          pos: () => m.points.dates!, radius: 2, when: () => !this.carried && !this.done.has('feed-poor'),
+          label: () => (ar() ? 'احمل سلّة التمر' : 'Pick up the basket of dates'),
+          run: () => {
+            basket.visible = false;
+            this.carry('dates');
+          },
+        },
+        {
+          pos: () => m.points.suffa!, radius: 3.2, when: () => this.carried?.kind === 'dates',
+          label: () => (ar() ? 'أعطِ التمرَ للفقراء' : 'Give the dates to the poor'),
+          run: () => {
+            this.drop();
+            poor.forEach((c) => c.setAnim('talk'));
+            this.deed('feed-poor');
+            setTimeout(check, 50);
+          },
+        },
+      );
+    });
+    this.interactions = [];
+
+    // The garden.
+    this.setObjective(objectives.medinaGarden);
+    const prophet = this.actor(LOOK_PROPHET);
+    prophet.veil();
+    this.place(prophet, m.points.prophetRest!, -0.6);
+    prophet.setAnim('sit');
+    this.adTarget = m.points.northGarden!.clone();
+    this.adSpeed = 1.7;
+    this.narrator.preload(['m02', 'm03', 'm04', 'm05']);
+    await new Promise<void>((resolve) => {
+      const tick = () => {
+        if (!this.adTarget && this.player.position.distanceTo(m.points.northGarden!) < 7) {
+          this.tickers = this.tickers.filter((x) => x !== tick);
+          resolve();
+        }
+      };
+      this.tickers.push(tick);
+    });
+    this.cine(true);
+    await this.walk(this.abuDharr, [m.points.prophetRest!.clone().add(V(-1.2, 0, 2))], 1.1);
+    this.abuDharr.setAnim('interact');
+    this.shot(m.points.prophetRest!.clone().add(V(-6, 2.6, 6)), m.points.prophetRest!.clone().add(V(-0.4, 0.8, 1)));
+    await this.narrator.say('m02');
+    await this.fade(true, 1000);
+    await this.titleCard({ ar: 'صباحٌ آخر في المسجد', en: 'Another morning, in the mosque' });
+
+    // The mosque: the counsel.
+    const ali = this.actor(LOOK_ALI);
+    ali.veil();
+    this.place(prophet, m.points.prophetSeat!, 0.2);
+    prophet.setAnim('sit');
+    this.place(ali, m.points.aliSeat!, -0.2);
+    ali.setAnim('sit');
+    this.place(this.abuDharr, m.points.mosqueDoor!.clone().add(V(1, 0, 1)), Math.PI);
+    this.player.position.copy(m.points.mosqueDoor!.clone().add(V(-1.5, 0, 3)));
+    this.player.snapCamera();
+    this.cine(false);
+    this.setObjective(objectives.medinaMosque);
+    await this.fade(false, 900);
+    await new Promise<void>((resolve) => {
+      this.interactions.push({
+        pos: () => m.points.mosqueDoor!, radius: 3, when: () => true,
+        label: () => (ar() ? 'ادخل المسجد مع أبي ذرّ' : 'Enter the mosque with Abu Dharr'),
+        run: () => resolve(),
+      });
+    });
+    this.interactions = [];
+    this.cine(true);
+    this.shot(m.points.abuDharrSeat!.clone().add(V(5, 3.2, 6)), m.points.prophetSeat!.clone().add(V(0.8, 1, 1.2)));
+    await this.walk(this.abuDharr, [m.points.abuDharrSeat!], 1.5);
+    this.abuDharr.root.rotation.y = Math.PI;
+    this.abuDharr.setAnim('sit');
+    await this.narrator.say('m03', 'm04', 'm05');
+    this.setObjective(objectives.medinaDone);
+    await this.endChapter('medina', { ar: 'في صحبة النبيّ', en: 'Near the Prophet' }, ['irrigate', 'feed-poor']);
+  }
+
+  // ================================================================== chapter 3: the road to Tabuk
+  private async tabukChapter() {
+    const tb = this.tabuk;
+    const ar = () => this.lang() === 'ar';
+    const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
+    this.world.setTimeOfDay('day');
+    this.useScene('tabuk', tb.points.start!, Math.PI);
+    this.place(this.abuDharr, tb.points.start!.clone().add(V(-2, 0, -1)), Math.PI);
+    // His camel walks beside him until it gives out.
+    const cam = camel('#a8825a');
+    cam.position.copy(this.abuDharr.root.position).add(V(-1.8, 0, 0));
+    tb.group.add(cam);
+    let camelDown = false;
+    this.tickers.push((dt) => {
+      if (camelDown) return;
+      const target = this.abuDharr.root.position.clone().add(V(-1.6, 0, 1.4));
+      const d = target.sub(cam.position).setY(0);
+      if (d.length() > 0.3) {
+        cam.position.addScaledVector(d.normalize(), Math.min(2.2 * dt, d.length()));
+        cam.rotation.y = Math.atan2(d.x, d.z) - Math.PI / 2;
+      }
+    });
+    this.narrator.preload(['t01', 't02']);
+    await this.fade(false, 1200);
+    this.cine(true);
+    this.shot(tb.points.start!.clone().add(V(9, 6, 9)), tb.points.start!.clone().add(V(0, 1, -10)));
+    await this.narrator.say('t01');
+    this.cine(false);
+
+    // Survival: thirst rises in the heat; drink from your skins, refill at wells.
+    let water = 3;
+    let thirst = 0;
+    let lastWell = tb.points.start!.clone();
+    const thirstEl = this.el('.thirst');
+    thirstEl.hidden = false;
+    const showThirst = () => {
+      (thirstEl.querySelector('span') as HTMLElement).style.width = `${Math.round(thirst * 100)}%`;
+      (thirstEl.querySelector('em') as HTMLElement).textContent = `💧 ${water}  ·  ${ar() ? 'العطش' : 'Thirst'}`;
+      thirstEl.classList.toggle('warn', thirst > 0.7);
+    };
+    let storm = 0;
+    const fog = this.world.scene.fog as THREE.FogExp2;
+    const baseFog = fog.density;
+    const survival = (dt: number) => {
+      thirst = Math.min(1, thirst + dt * (this.player.moving ? 1 / 70 : 1 / 140) * (this.carried ? 1.4 : 1) * (1 + storm * 0.5));
+      if (thirst >= 1) {
+        thirst = 0.35;
+        water = 3;
+        toast(ar() ? 'أنهكك الحرّ فسقطت… أفقتَ عند آخر بئر.' : 'The heat overcame you… you came to at the last well.', 'warn');
+        this.player.position.copy(lastWell.clone().add(V(1.5, 0, 1.5)));
+        this.abuDharr.root.position.copy(lastWell.clone().add(V(-1.5, 0, 1)));
+        if (!camelDown) cam.position.copy(lastWell.clone().add(V(-3, 0, 1)));
+      }
+      this.slow = thirst > 0.8 ? 0.65 : 1;
+      tb.dustAt(this.player.position);
+      fog.density = baseFog * (1 + storm * 7);
+      showThirst();
+    };
+    this.tickers.push(survival);
+    this.interactions.push(
+      {
+        pos: () => this.player.position, radius: 1, when: () => water > 0 && thirst > 0.45 && !this.nearWell(tb, 2.6),
+        label: () => (ar() ? `اشربْ من قِربتك (${water})` : `Drink from your waterskin (${water})`),
+        run: () => {
+          water--;
+          thirst = Math.max(0, thirst - 0.55);
+        },
+      },
+      {
+        pos: () => this.nearWell(tb, 99)!, radius: 2.6, when: () => water < 3 || thirst > 0.1,
+        label: () => (ar() ? 'املأ القِرب واشرب' : 'Refill your skins and drink'),
+        run: () => {
+          water = 3;
+          thirst = 0;
+          lastWell = this.nearWell(tb, 99)!.clone();
+          this.effects.burst(lastWell.clone().setY(0.8), '#8fd3ff', 0.6);
+        },
+      },
+    );
+    this.setObjective(objectives.tabukMarch);
+    toast(ar() ? 'الطريق طويل والحرّ شديد. اشرب حين يشتدّ العطش، واملأ القِرب من الآبار.' : 'The road is long and the heat fierce. Drink when your thirst rises, and refill at the wells.');
+
+    const path = tb.path;
+    // Stage 1: march to the first well; Abu Dharr grows parched.
+    await this.escort(path.slice(1, 7));
+    await new Promise<void>((resolve) => {
+      this.abuDharr.setAnim('sit');
+      toast(ar() ? 'أبو ذرّ يكاد يهلك عطشًا.' : 'Abu Dharr is parched.', 'warn');
+      this.interactions.push({
+        pos: () => this.abuDharr.root.position, radius: 2.6, when: () => !this.done.has('share-water'),
+        label: () => (water > 0 ? (ar() ? 'آثرْه بمائك' : 'Give him your water') : ar() ? 'املأ قربتك من البئر أوّلًا' : 'Fill your skin at the well first'),
+        run: () => {
+          if (water <= 0) return;
+          water--;
+          this.deed('share-water');
+          resolve();
+        },
+      });
+    });
+    // Stage 2: the sandstorm.
+    this.setObjective(objectives.tabukStorm);
+    storm = 1;
+    tb.setStorm(1);
+    await this.escort(path.slice(7, 11));
+    storm = 0;
+    tb.setStorm(0);
+    // Stage 3: the camel gives out.
+    camelDown = true;
+    cam.rotation.z = 0.5;
+    cam.position.y = -0.7;
+    this.cine(true);
+    this.shot(this.abuDharr.root.position.clone().add(V(5, 3, 5)), cam.position.clone().setY(1));
+    this.abuDharr.setAnim('interact');
+    await this.narrator.say('t02');
+    this.abuDharr.setAnim('carry');
+    this.cine(false);
+    this.setObjective(objectives.tabukCarry);
+    await new Promise<void>((resolve) => {
+      this.interactions.push({
+        pos: () => this.abuDharr.root.position, radius: 2.6, when: () => !this.carried,
+        label: () => (ar() ? 'احملْ بعضَ متاعه' : 'Carry part of his load'),
+        run: () => {
+          this.carry('load');
+          this.deed('carry-load');
+          resolve();
+        },
+      });
+    });
+    this.narrator.preload(['t03', 't04']);
+    await this.escort(path.slice(11));
+    // Arrival at the camp: the Prophet sees a lone walker on the road.
+    this.tickers = this.tickers.filter((x) => x !== survival);
+    thirstEl.hidden = true;
+    fog.density = baseFog;
+    this.drop();
+    const prophet = this.actor(LOOK_PROPHET);
+    prophet.veil();
+    this.place(prophet, tb.armyCamp.clone().add(V(0, 0, 10)), 0);
+    const companions = [0, 1, 2, 3].map((i) => {
+      const c = this.actor([LOOKS.townsman!, LOOKS.guide!, LOOKS.companion2!, LOOKS.wayfarer!][i]!);
+      this.place(c, tb.armyCamp.clone().add(V(-3 + i * 2, 0, 8.5)), 0);
+      return c;
+    });
+    void companions;
+    this.cine(true);
+    this.shot(tb.armyCamp.clone().add(V(4, 3.4, 4)), this.abuDharr.root.position.clone().setY(1.2));
+    await this.narrator.say('t03');
+    this.shot(tb.armyCamp.clone().add(V(14, 12, 18)), tb.armyCamp.clone());
+    await this.narrator.say('t04');
+    this.setObjective(objectives.tabukDone);
+    await this.endChapter('tabuk', { ar: 'وحيدًا على طريق تبوك', en: 'Alone on the Road to Tabuk' }, ['share-water', 'carry-load']);
+  }
+
+  private nearWell(tb: TabukScene, within: number) {
+    return tb.wells.find((w) => w.distanceTo(this.player.position) < within) ?? null;
+  }
+
+  /** Chapter summary, then back to the journey map. */
+  private async endChapter(id: string, title: L, deedIds: string[]) {
+    markCompleted(id);
+    const ar = this.lang() === 'ar';
+    const list = deeds.filter((d) => deedIds.includes(d.id));
+    const choice = await modal({
+      eyebrow: ar ? 'اكتمل الفصل' : 'Chapter complete',
+      title: this.tr(title),
+      body: `<p class="big">${this.hasanat} <small>${ar ? 'حسنة' : 'hasanat'}</small></p>
+        <ul class="deeds">${list.map((d) => `<li class="${this.done.has(d.id) ? '' : 'missed'}">${this.done.has(d.id) ? '✓' : '○'} ${esc(this.tr(d.title))}</li>`).join('')}</ul>`,
+      actions: [
+        { id: 'replay', label: ar ? 'أعد الفصل' : 'Replay chapter' },
+        { id: 'exit', label: ar ? 'خريطة الرحلة' : 'Journey map', primary: true },
+      ],
+      className: 'end-modal',
+    });
+    this.dispose();
+    if (choice === 'replay') location.reload();
     else this.onExit();
   }
 
@@ -943,6 +1279,12 @@ export class CompanionChapter {
         return p;
       },
       stone: () => new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.38, 0.42), new THREE.MeshStandardMaterial({ color: '#9c8a72', roughness: 0.95 })),
+      dates: () => new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.24, 0.36, 12), new THREE.MeshStandardMaterial({ color: '#8a6a3a', roughness: 1 })),
+      load: () => {
+        const b = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.45, 0.4), new THREE.MeshStandardMaterial({ color: '#6b4a2e', roughness: 1 }));
+        b.position.set(0, 0.25, -0.75);
+        return b;
+      },
       water: () => {
         const s = new THREE.Mesh(new THREE.SphereGeometry(0.2, 10, 8), new THREE.MeshStandardMaterial({ color: '#7a5032', roughness: 0.5 }));
         s.scale.set(1, 1.2, 0.8);
@@ -956,7 +1298,7 @@ export class CompanionChapter {
     this.carried = { kind, mesh };
     const chip = this.el('.carry-chip');
     chip.hidden = false;
-    chip.textContent = { bucket: '🪣', pole: '🪵', stone: '🪨', water: '💧' }[kind] ?? '•';
+    chip.textContent = { bucket: '🪣', pole: '🪵', stone: '🪨', water: '💧', dates: '🌴', load: '🎒' }[kind] ?? '•';
   }
 
   private drop() {
@@ -995,7 +1337,7 @@ export class CompanionChapter {
     if (!this.cutscene) {
       const offset = me.update(gdt, this.controls.blocking, this.player.moving, this.controls.running);
       this.player.push(offset);
-      this.player.speedScale = me.attacking ? 0.25 : me.blockHeldFor >= 0 ? 0.4 : this.controls.sneaking ? 0.5 : this.carried ? 0.75 : 1;
+      this.player.speedScale = me.attacking ? 0.25 : me.blockHeldFor >= 0 ? 0.4 : this.controls.sneaking ? 0.5 : this.carried ? 0.75 : this.slow;
       this.player.canTurn = !me.attacking;
       this.player.animOverride = me.dodging ? 'dodge' : me.attacking ? 'attack' : me.hurtT > 0 ? 'hit' : me.blockHeldFor >= 0 ? 'block' : this.controls.sneaking ? 'crouch' : this.carried && this.player.moving ? 'carry' : null;
       this.player.update(gdt);
@@ -1024,7 +1366,7 @@ export class CompanionChapter {
     }
     for (const fn of [...this.tickers]) fn(gdt);
     for (const a of this.actors) if (a.root.visible) a.update(gdt);
-    (this.scene === 'ghifar' ? this.ghifar : this.mecca).update(dt, t);
+    this.sceneOf(this.scene).update(dt, t);
     this.effects.update(dt);
     this.world.followSun(this.player.position);
 
@@ -1054,7 +1396,7 @@ export class CompanionChapter {
     this.disposers.forEach((d) => d());
     this.tickers = [];
     this.controls.dispose();
-    this.world.scene.remove(this.ghifar.group, this.mecca.group, this.player.character.root, ...this.actors.map((a) => a.root));
+    this.world.scene.remove(...Object.values(this.built).map((b) => b.group), this.player.character.root, ...this.actors.map((a) => a.root));
     this.hud.innerHTML = '';
     this.hud.hidden = true;
   }
