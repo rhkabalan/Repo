@@ -1319,16 +1319,17 @@ export class CompanionChapter {
           invited = true;
           const a = (i / 5) * Math.PI - Math.PI / 2;
           const seat = P.preach!.clone().add(V(Math.cos(a) * 3.2, 0, Math.sin(a) * 3.2 + 2.4));
-          void this.walk(c, [seat], 2).then(() => {
+          gathered++;
+          void this.walk(c, [seat], 3.4).then(() => {
             c.root.lookAt(P.preach!.x, 0, P.preach!.z);
             c.setAnim('sit');
-            gathered++;
           });
         },
       });
     });
     await this.until(() => gathered >= 5);
     this.interactions = [];
+    await wait(2500 / Math.max(1, this.timeScale));
 
     // Mu‘awiya's messenger brings a purse.
     const messenger = this.actor(LOOK_GUARD);
