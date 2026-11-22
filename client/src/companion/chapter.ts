@@ -1136,12 +1136,12 @@ export class CompanionChapter {
         },
       },
       {
-        pos: () => this.nearWell(tb, 99)!, radius: 2.6, when: () => water < 3 || thirst > 0.1,
+        pos: () => this.nearWell(tb, Infinity)!, radius: 2.6, when: () => water < 3 || thirst > 0.1,
         label: () => (ar() ? 'املأ القِرب واشرب' : 'Refill your skins and drink'),
         run: () => {
           water = 3;
           thirst = 0;
-          lastWell = this.nearWell(tb, 99)!.clone();
+          lastWell = this.nearWell(tb, Infinity)!.clone();
           this.effects.burst(lastWell.clone().setY(0.8), '#8fd3ff', 0.6);
         },
       },
@@ -1220,8 +1220,11 @@ export class CompanionChapter {
     await this.endChapter('tabuk', { ar: 'وحيدًا على طريق تبوك', en: 'Alone on the Road to Tabuk' }, ['share-water', 'carry-load']);
   }
 
+  /** The nearest well, if within range (pass Infinity for the nearest one at any distance). */
   private nearWell(tb: TabukScene, within: number) {
-    return tb.wells.find((w) => w.distanceTo(this.player.position) < within) ?? null;
+    const p = this.player.position;
+    const w = [...tb.wells].sort((a, b) => a.distanceTo(p) - b.distanceTo(p))[0]!;
+    return w.distanceTo(p) < within ? w : null;
   }
 
   /** Chapter summary, then back to the journey map. */
