@@ -29,7 +29,7 @@ export class Controls {
   constructor(
     private readonly canvas: HTMLCanvasElement,
     private readonly camera: THREE.Camera,
-    private readonly ground: THREE.Object3D,
+    private ground: THREE.Object3D,
     hud: HTMLElement,
   ) {
     const typing = (e: Event) => !!(e.target as HTMLElement).closest?.('input, textarea, button, [role="dialog"]');
@@ -75,6 +75,11 @@ export class Controls {
       canvas.removeEventListener('contextmenu', noMenu);
     };
     this.buildTouchUi(hud);
+  }
+
+  /** Swap the surface tap-to-walk raycasts against (when the scene changes). */
+  setGround(ground: THREE.Object3D) {
+    this.ground = ground;
   }
 
   on(action: Action, fn: () => void) {

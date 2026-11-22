@@ -4,6 +4,7 @@ import { defineConfig } from 'vite';
 // TIMELINE=1 builds only the timeline game (a standalone page with no server).
 const env = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {};
 const timelineOnly = env.TIMELINE === '1';
+const companionOnly = env.COMPANION === '1';
 
 export default defineConfig({
   server: {
@@ -22,7 +23,9 @@ export default defineConfig({
     rollupOptions: {
       input: timelineOnly
         ? { timeline: 'timeline.html' }
-        : { main: 'index.html', timeline: 'timeline.html' },
+        : companionOnly
+          ? { companion: 'companion.html' }
+          : { main: 'index.html', timeline: 'timeline.html', companion: 'companion.html' },
     },
   },
 });

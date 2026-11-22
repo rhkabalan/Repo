@@ -21,6 +21,8 @@ export class World {
   private composer: EffectComposer;
   private readonly clock = new THREE.Clock();
   private updaters: ((dt: number, t: number) => void)[] = [];
+  private sky!: Sky;
+  private hemi!: THREE.HemisphereLight;
 
   constructor(
     readonly canvas: HTMLCanvasElement,
@@ -50,6 +52,7 @@ export class World {
 
   private setupSky() {
     const sky = new Sky();
+    this.sky = sky;
     sky.scale.setScalar(450);
     const u = sky.material.uniforms;
     u.turbidity!.value = 4;
@@ -72,7 +75,8 @@ export class World {
   }
 
   private setupLights() {
-    this.scene.add(new THREE.HemisphereLight(0xfff1d6, 0x8a6440, 0.6));
+    this.hemi = new THREE.HemisphereLight(0xfff1d6, 0x8a6440, 0.6);
+    this.scene.add(this.hemi);
     const s = this.sun;
     s.castShadow = this.quality !== 'low';
     s.shadow.mapSize.setScalar(this.quality === 'high' ? 4096 : 2048);
@@ -83,6 +87,29 @@ export class World {
     s.shadow.bias = -0.0004;
     s.shadow.normalBias = 0.03;
     this.scene.add(s, s.target);
+  }
+
+  /** Lighting presets for the story: bright day, golden dusk, moonlit night. */
+  setTimeOfDay(time: 'day' | 'dusk' | 'night') {
+    const presets = {
+      day: { elev: 68, az: 58, sun: 0xffcf98, sunI: 2.1, hemiSky: 0xfff1d6, hemiGround: 0x8a6440, hemiI: 0.6, fog: 0xd9b88f, env: 0.4, exposure: 0.78, rayleigh: 1.1 },
+      dusk: { elev: 86, az: 70, sun: 0xff9a55, sunI: 1.5, hemiSky: 0xffc9a0, hemiGround: 0x6a4630, hemiI: 0.45, fog: 0xc98d62, env: 0.3, exposure: 0.85, rayleigh: 2.5 },
+      night: { elev: 60, az: 200, sun: 0x9fb4ff, sunI: 0.55, hemiSky: 0x4a5a8a, hemiGround: 0x1c1610, hemiI: 0.35, fog: 0x141a2a, env: 0.08, exposure: 0.9, rayleigh: 0.2 },
+    }[time];
+    const dir = new THREE.Vector3().setFromSphericalCoords(1, THREE.MathUtils.degToRad(presets.elev), THREE.MathUtils.degToRad(presets.az));
+    const u = this.sky.material.uniforms;
+    // At night the sky shader sees a sun far below the horizon (a dark sky) while the moonlight comes from above.
+    u.sunPosition!.value.copy(time === 'night' ? new THREE.Vector3(0, -1, 0) : dir);
+    u.rayleigh!.value = presets.rayleigh;
+    this.sun.color.setHex(presets.sun);
+    this.sun.intensity = presets.sunI;
+    this.sun.position.copy(this.sun.target.position).addScaledVector(dir, 80);
+    this.hemi.color.setHex(presets.hemiSky);
+    this.hemi.groundColor.setHex(presets.hemiGround);
+    this.hemi.intensity = presets.hemiI;
+    (this.scene.fog as THREE.FogExp2).color.setHex(presets.fog);
+    this.scene.environmentIntensity = presets.env;
+    this.renderer.toneMappingExposure = presets.exposure;
   }
 
   /** Keep the shadow frustum centred on the player so shadows stay sharp. */
