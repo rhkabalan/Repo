@@ -456,7 +456,7 @@ export function buildMeccaValley(): MeccaValley {
   block(9, -9, 2.4, 2.4);
 
   // Ali's careful route through the lanes, from his house (east) to the house where the Prophet was (north-west).
-  const route = [v3(42, 0, -6), v3(34, 0, -18), v3(22, 0, -30), v3(8, 0, -40), v3(-8, 0, -44), v3(-20, 0, -52), v3(-30, 0, -60)];
+  const route = [v3(42, 0, -6), v3(34, 0, -18), v3(22, 0, -30), v3(8, 0, -40), v3(-8, 0, -44), v3(-20, 0, -52), v3(-26.5, 0, -57)];
   const nearRoute = (x: number, z: number, m: number) => {
     for (let i = 0; i < route.length - 1; i++) {
       const a = route[i]!, b = route[i + 1]!;
@@ -527,6 +527,22 @@ export function buildMeccaValley(): MeccaValley {
     return lamp;
   };
   const lamps = [special(46, -2, -Math.PI / 2 + 0.4), special(-34, -66, Math.PI * 0.25)];
+  // A palm-frond shade before the meeting house, where the Prophet sits.
+  const shade = new THREE.Group();
+  const frond = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.12, 3.4), mat('#8a7a4a', 1));
+  frond.position.y = 2.5;
+  shade.add(frond);
+  for (const [px, pz] of [[-1.9, -1.5], [1.9, -1.5], [-1.9, 1.5], [1.9, 1.5]]) {
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.12, 2.5, 7), mat('#6a5034', 1));
+    post.position.set(px!, 1.25, pz!);
+    shade.add(post);
+  }
+  const mat2 = new THREE.Mesh(new THREE.BoxGeometry(3, 0.04, 2.2), mat('#7a2e22', 1, cloth('#7a2e22', '#c7963e')));
+  mat2.position.y = 0.03;
+  shade.add(mat2);
+  shade.position.set(-29.4, 0, -61.4);
+  shade.rotation.y = Math.PI * 0.25;
+  g.add(shadowed(shade));
 
   // Market lane south of the court.
   const stallCloth = [cloth('#a8452a', '#d9a046'), cloth('#2f5a6a', '#d8c39a'), cloth('#6a4a2a', '#e0c08a')];
@@ -595,8 +611,8 @@ export function buildMeccaValley(): MeccaValley {
       thirsty: v3(-12, 0, 14),
       poorMan: v3(-18, 0, 30.5),
       aliHouse: v3(42, 0, -6),
-      meeting: v3(-30, 0, -60),
-      prophetSeat: v3(-31.2, 0, -63.4),
+      meeting: v3(-26.5, 0, -57),
+      prophetSeat: v3(-29.4, 0, -61.4),
       crowd: v3(4, 0, 18),
     },
     placeStone(i: number) {

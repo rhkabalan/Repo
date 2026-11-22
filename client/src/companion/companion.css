@@ -86,3 +86,5 @@ html[lang='ar'] .narration-text { font-family: var(--font-ar-display); font-size
 .fade p { color: var(--gold); font-family: var(--font-en-display); font-size: clamp(1.6rem, 5vw, 2.6rem); animation: narr-in 0.8s ease-out; }
 html[lang='ar'] .fade p { font-family: var(--font-ar-display); }
 #hud .hud-right { align-items: flex-end; }
+
+#modal .panel { max-height: calc(100dvh - 32px); overflow-y: auto; }

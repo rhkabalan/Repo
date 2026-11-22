@@ -184,6 +184,10 @@ export class CompanionChapter {
   /** Award a good deed once: hasanat plus its Qur'an verse. */
   private deed(id: string) {
     if (this.done.has(id)) return;
+    if (this.narrator.speaking) {
+      setTimeout(() => this.deed(id), 800);
+      return;
+    }
     const d = deeds.find((x) => x.id === id);
     if (!d) return;
     this.done.add(id);
@@ -743,7 +747,7 @@ export class CompanionChapter {
     this.place(this.abuDharr, m.points.prophetSeat!.clone().add(new THREE.Vector3(0.6, 0, 2.6)), Math.PI * 1.15);
     this.player.position.copy(m.points.prophetSeat!.clone().add(new THREE.Vector3(3, 0, 4)));
     this.cine(true);
-    this.shot(m.points.prophetSeat!.clone().add(new THREE.Vector3(6, 3.2, 7.5)), m.points.prophetSeat!.clone().add(new THREE.Vector3(0.6, 1.1, 1)));
+    this.shot(m.points.prophetSeat!.clone().add(new THREE.Vector3(5.2, 2.4, 5.8)), m.points.prophetSeat!.clone().add(new THREE.Vector3(0.5, 1.0, 1.0)));
     await this.fade(false, 1100);
     this.abuDharr.setAnim('talk');
     await this.narrator.say('n11');
