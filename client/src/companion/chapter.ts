@@ -58,6 +58,8 @@ export class CompanionChapter {
   /** Abu Dharr walks toward this point when set. */
   private adTarget: THREE.Vector3 | null = null;
   private adSpeed = 1.7;
+  /** Test hook: speeds up game time (automated walkthroughs on slow software rendering). */
+  timeScale = 1;
 
   constructor(
     private readonly world: World,
@@ -981,6 +983,7 @@ export class CompanionChapter {
   private update(dt: number, t: number) {
     const slow = this.hitStop > 0 ? 0.08 : 1;
     if (this.hitStop > 0) this.hitStop -= dt;
+    dt *= this.timeScale;
     const gdt = dt * slow;
     this.controls.update();
     const me = this.me;

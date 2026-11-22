@@ -107,7 +107,7 @@ function title() {
 async function begin() {
   screen.hidden = true;
   screen.innerHTML = '';
-  world ??= new World(canvas);
+  world ??= new World(canvas, location.search.includes('low') ? 'low' : undefined);
   if (!narrator) {
     narrator = new Narrator(document.body, () => lang, voice);
     world.start();
