@@ -29,16 +29,16 @@ const shadowed = <T extends THREE.Object3D>(o: T) => {
 };
 const mat = (color: string, rough = 0.9, map?: THREE.Texture) => new THREE.MeshStandardMaterial({ color, roughness: rough, map: map ?? null });
 
-function addGround(g: THREE.Group, color: string, repeat = 50) {
+function addGround(g: THREE.Group, color: string, repeat = 50, flat = 90) {
   const tex = sand().clone();
   tex.needsUpdate = true;
   tex.repeat.set(repeat, repeat);
-  const geo = new THREE.PlaneGeometry(500, 500, 160, 160);
+  const geo = new THREE.PlaneGeometry(600, 600, 180, 180);
   const p = geo.attributes.position!;
   for (let i = 0; i < p.count; i++) {
     const x = p.getX(i), y = p.getY(i);
     const d = Math.hypot(x, y);
-    const dune = d > 90 ? Math.sin(x * 0.045) * Math.cos(y * 0.035) * 2.5 + (d - 90) * 0.05 : 0;
+    const dune = d > flat ? Math.sin(x * 0.045) * Math.cos(y * 0.035) * 2.5 + (d - flat) * 0.05 : 0;
     p.setZ(i, dune + Math.sin(x * 0.6) * Math.cos(y * 0.5) * 0.03 - 0.04);
   }
   geo.computeVertexNormals();
@@ -216,8 +216,9 @@ export function buildGhifar(): GhifarScene {
   const g = new THREE.Group();
   const colliders: Collider[] = [];
   const r = rng(7);
-  const ground = addGround(g, '#dcc29a');
-  addHills(g, r, '#8a6a4c', 150, 26);
+  // Flat out past the night camp on the road (z ≈ −125).
+  const ground = addGround(g, '#dcc29a', 60, 150);
+  addHills(g, r, '#8a6a4c', 185, 30);
   const block = (x: number, z: number, w: number, d: number) => colliders.push({ min: new THREE.Vector2(x - w / 2, z - d / 2), max: new THREE.Vector2(x + w / 2, z + d / 2) });
 
   // Camp tents in a loose ring.
