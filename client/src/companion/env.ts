@@ -917,3 +917,269 @@ export function buildTabuk(): TabukScene {
     },
   };
 }
+
+// ====================================================================== Damascus (c. 650: still a Roman city)
+export function buildDamascus(): SceneBase {
+  const g = new THREE.Group();
+  const colliders: Collider[] = [];
+  const r = rng(41);
+  const ground = addGround(g, '#b9a58a', 50, 120);
+  addHills(g, r, '#8d7860', 170, 20);
+  const block = (x: number, z: number, w: number, d: number) => colliders.push({ min: new THREE.Vector2(x - w / 2, z - d / 2), max: new THREE.Vector2(x + w / 2, z + d / 2) });
+  const lime = new THREE.MeshStandardMaterial({ map: stoneBlocks(3), color: '#d8ccb4', roughness: 0.9 });
+  // The paved colonnaded street.
+  const paveTex = stoneBlocks(14).clone();
+  paveTex.needsUpdate = true;
+  paveTex.repeat.set(3, 30);
+  const pave = new THREE.Mesh(new THREE.PlaneGeometry(12, 110), new THREE.MeshStandardMaterial({ map: paveTex, color: '#c8b89c', roughness: 0.95 }));
+  pave.rotation.x = -Math.PI / 2;
+  pave.position.set(0, 0.03, -20);
+  pave.receiveShadow = true;
+  g.add(pave);
+  for (let i = 0; i < 18; i++) {
+    for (const side of [-1, 1]) {
+      const x = side * 6.2, z = 30 - i * 6;
+      if (z < -34 && z > -46) continue; // the arch
+      const col = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.36, 5.2, 12), lime);
+      col.position.set(x, 2.6, z);
+      g.add(shadowed(col));
+      const cap = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.35, 0.9), lime);
+      cap.position.set(x, 5.35, z);
+      g.add(shadowed(cap));
+      block(x, z, 0.8, 0.8);
+    }
+  }
+  // Shops behind the colonnades.
+  for (const side of [-1, 1]) {
+    const shops = new THREE.Mesh(new THREE.BoxGeometry(6, 5, 100), new THREE.MeshStandardMaterial({ map: plaster('#c9b896', 7), roughness: 1 }));
+    shops.position.set(side * 12.5, 2.5, -20);
+    g.add(shadowed(shops));
+    block(side * 12.5, -20, 6, 100);
+  }
+  // A Roman arch across the street.
+  for (const side of [-1, 1]) {
+    const pier = new THREE.Mesh(new THREE.BoxGeometry(2.2, 8, 2.4), lime);
+    pier.position.set(side * 4.5, 4, -40);
+    g.add(shadowed(pier));
+    block(side * 4.5, -40, 2.2, 2.4);
+  }
+  const lintel = new THREE.Mesh(new THREE.BoxGeometry(11.2, 2, 2.4), lime);
+  lintel.position.set(0, 9, -40);
+  g.add(shadowed(lintel));
+  // The walled precinct of the Church of St John at the far end (no mosque yet).
+  const precinct = new THREE.Mesh(new THREE.BoxGeometry(40, 9, 4), lime);
+  precinct.position.set(0, 4.5, -78);
+  g.add(shadowed(precinct));
+  block(0, -78, 40, 4);
+  const basilica = new THREE.Mesh(new THREE.BoxGeometry(24, 6, 14), new THREE.MeshStandardMaterial({ color: '#a55a3a', roughness: 0.9 }));
+  basilica.position.set(0, 12, -86);
+  g.add(basilica);
+  // Mu‘awiya's palace on the west side of the plaza.
+  const palace = new THREE.Mesh(new THREE.BoxGeometry(14, 8, 12), new THREE.MeshStandardMaterial({ map: plaster('#d6c8a8', 3), roughness: 0.9 }));
+  palace.position.set(-17, 4, -4);
+  g.add(shadowed(palace));
+  block(-17, -4, 14, 12);
+  const gate = new THREE.Mesh(new THREE.BoxGeometry(0.3, 4, 3), new THREE.MeshStandardMaterial({ color: '#3f5a3a', roughness: 0.6 }));
+  gate.position.set(-9.85, 2, -4);
+  g.add(gate);
+  // Market stalls and an oven along the street.
+  const stallCloth = [cloth('#a8452a', '#d9a046'), cloth('#2f5a6a', '#d8c39a'), cloth('#6a4a2a', '#e0c08a')];
+  for (let i = 0; i < 6; i++) {
+    const side = i % 2 ? 1 : -1;
+    const z = 22 - i * 7;
+    const aw = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.05, 2), new THREE.MeshStandardMaterial({ map: stallCloth[i % 3]!, roughness: 1, side: THREE.DoubleSide }));
+    aw.position.set(side * 8, 2.3, z);
+    g.add(aw);
+  }
+  const oven = new THREE.Mesh(new THREE.SphereGeometry(1.1, 14, 10, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#8a5a3a', roughness: 1 }));
+  oven.position.set(4.5, 0, 24);
+  g.add(shadowed(oven));
+  block(4.5, 24, 2, 2);
+  for (let i = 0; i < 10; i++) {
+    const t = acacia(r);
+    t.position.set((r() > 0.5 ? 1 : -1) * (30 + r() * 30), 0, -r() * 80 + 20);
+    g.add(t);
+  }
+  return {
+    group: g,
+    colliders,
+    ground,
+    points: {
+      arrive: v3(0, 0, 34),
+      preach: v3(2, 0, -18),
+      oven: v3(3, 0, 22),
+      poor1: v3(-4.5, 0, 12),
+      poor2: v3(4.8, 0, -2),
+      poor3: v3(-4.6, 0, -28),
+      palaceGate: v3(-8.6, 0, -4),
+      l1: v3(-3, 0, 18), l2: v3(4, 0, 8), l3: v3(-4, 0, -8), l4: v3(3.5, 0, -30), l5: v3(-2, 0, -50),
+    },
+    update() {},
+  };
+}
+
+// ====================================================================== Jabal Amil (reported tradition)
+export function buildJabalAmil(): SceneBase {
+  const g = new THREE.Group();
+  const colliders: Collider[] = [];
+  const r = rng(53);
+  const ground = addGround(g, '#a9a07a', 60, 140);
+  const block = (x: number, z: number, w: number, d: number) => colliders.push({ min: new THREE.Vector2(x - w / 2, z - d / 2), max: new THREE.Vector2(x + w / 2, z + d / 2) });
+  // The sea to the west.
+  const sea = new THREE.Mesh(new THREE.PlaneGeometry(300, 600), new THREE.MeshStandardMaterial({ color: '#3f7f95', roughness: 0.2, metalness: 0.1 }));
+  sea.rotation.x = -Math.PI / 2;
+  sea.position.set(-215, 0.05, 0);
+  g.add(sea);
+  // Green hills to the east, terraced.
+  const hillMat = new THREE.MeshStandardMaterial({ color: '#7d8a52', roughness: 1, flatShading: true });
+  for (let i = 0; i < 14; i++) {
+    const hill = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 2), hillMat);
+    hill.scale.set(40 + r() * 30, 18 + r() * 20, 40 + r() * 30);
+    hill.position.set(90 + r() * 80, -4, -160 + i * 25);
+    g.add(hill);
+  }
+  const terraceMat = new THREE.MeshStandardMaterial({ map: stoneBlocks(9), color: '#b5a68a', roughness: 1 });
+  for (let i = 0; i < 6; i++) {
+    const t = new THREE.Mesh(new THREE.BoxGeometry(30, 0.6, 0.6), terraceMat);
+    t.position.set(20 + i * 2, 0.3, -10 - i * 7);
+    g.add(shadowed(t));
+  }
+  // Olive trees.
+  const olives: THREE.Vector3[] = [];
+  const oliveMat = new THREE.MeshStandardMaterial({ color: '#6c7a4a', roughness: 1 });
+  for (let i = 0; i < 26; i++) {
+    const x = -10 + (i % 6) * 7 + r() * 2, z = 10 - Math.floor(i / 6) * 9 + r() * 2;
+    const tree = new THREE.Group();
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.3, 1.6, 6), mat('#5a4636', 1));
+    trunk.position.y = 0.8;
+    tree.add(trunk);
+    const crown = new THREE.Mesh(new THREE.SphereGeometry(1.6, 10, 8), oliveMat);
+    crown.scale.set(1.2, 0.8, 1.2);
+    crown.position.y = 2.2;
+    tree.add(crown);
+    tree.position.set(x, 0, z);
+    g.add(shadowed(tree));
+    if (i % 5 === 0 && olives.length < 5) olives.push(v3(x + 1.6, 0, z));
+  }
+  // The olive press.
+  const press = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.5, 0.8, 16), terraceMat);
+  press.position.set(-16, 0.4, 18);
+  g.add(shadowed(press));
+  block(-16, 18, 3, 3);
+  // Villages: Sarafand by the sea, Mays toward the hills.
+  const house = (x: number, z: number) => {
+    const h = new THREE.Mesh(new THREE.BoxGeometry(5, 3.2, 5), new THREE.MeshStandardMaterial({ map: plaster('#d9cfb6', Math.floor(r() * 9)), roughness: 1 }));
+    h.position.set(x, 1.6, z);
+    g.add(shadowed(h));
+    block(x, z, 5, 5);
+  };
+  for (let i = 0; i < 7; i++) house(-48 + (i % 3) * 8, 20 + Math.floor(i / 3) * 9);
+  for (let i = 0; i < 7; i++) house(52 + (i % 3) * 8, -66 - Math.floor(i / 3) * 9);
+  for (let i = 0; i < 3; i++) {
+    const boat = new THREE.Mesh(new THREE.BoxGeometry(4, 0.6, 1.4), mat('#6a4a2c'));
+    boat.position.set(-66, 0.3, 14 + i * 6);
+    g.add(boat);
+  }
+  // The broken terrace wall (four gaps).
+  const slots = [v3(4, 0, -22), v3(6, 0, -22), v3(8, 0, -22), v3(10, 0, -22)];
+  const slotMeshes = slots.map((p) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.7, 0.6), terraceMat);
+    m.position.set(p.x, 0.35, p.z);
+    m.visible = false;
+    g.add(shadowed(m));
+    return m;
+  });
+  const stones = [v3(0, 0, -18), v3(13, 0, -19), v3(2, 0, -27), v3(12, 0, -27)];
+  return {
+    group: g,
+    colliders,
+    ground,
+    points: {
+      arrive: v3(-40, 0, 4),
+      sarafand: v3(-38, 0, 12),
+      press: v3(-13.6, 0, 18),
+      mays: v3(48, 0, -56),
+      o1: olives[0]!, o2: olives[1]!, o3: olives[2]!, o4: olives[3]!, o5: olives[4]!,
+      t1: stones[0]!, t2: stones[1]!, t3: stones[2]!, t4: stones[3]!,
+      wall: v3(7, 0, -20.8),
+    },
+    update() {},
+    // Expose the wall slots through userData for the chapter.
+    ...{ placeSlot: (i: number) => (slotMeshes[i]!.visible = true) },
+  } as SceneBase & { placeSlot(i: number): void };
+}
+
+// ====================================================================== al-Rabadhah
+export function sheep() {
+  const s = new THREE.Group();
+  const wool = mat('#e8e0d0', 1);
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.45, 12, 10), wool);
+  body.scale.set(1.3, 0.9, 0.9);
+  body.position.y = 0.6;
+  s.add(body);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.18, 10, 8), mat('#3a302a', 1));
+  head.position.set(0.6, 0.75, 0);
+  s.add(head);
+  for (const [x, z] of [[0.3, 0.2], [0.3, -0.2], [-0.3, 0.2], [-0.3, -0.2]]) {
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.4, 5), mat('#3a302a', 1));
+    leg.position.set(x!, 0.2, z!);
+    s.add(leg);
+  }
+  return shadowed(s);
+}
+
+export function buildRabadhah(): SceneBase {
+  const g = new THREE.Group();
+  const colliders: Collider[] = [];
+  const r = rng(61);
+  const ground = addGround(g, '#c9a97c', 60, 160);
+  addHills(g, r, '#8a6a52', 190, 22);
+  blackRocks(g, r, 30, -40, 50, 25);
+  const block = (x: number, z: number, w: number, d: number) => colliders.push({ min: new THREE.Vector2(x - w / 2, z - d / 2), max: new THREE.Vector2(x + w / 2, z + d / 2) });
+  const hut = new THREE.Mesh(new THREE.BoxGeometry(5, 3, 4), new THREE.MeshStandardMaterial({ map: plaster('#a88a64', 5), roughness: 1 }));
+  hut.position.set(-4, 1.5, -6);
+  g.add(shadowed(hut));
+  block(-4, -6, 5, 4);
+  const t = tent(r, 4, 3);
+  t.position.set(3, 0, -7);
+  g.add(t);
+  block(3, -7, 4, 3);
+  const w = well();
+  w.position.set(8, 0, 4);
+  g.add(w);
+  block(8, 4, 2.4, 2.4);
+  for (let i = 0; i < 12; i++) {
+    const a = acacia(r);
+    a.position.set((r() - 0.5) * 120, 0, (r() - 0.5) * 120);
+    if (a.position.length() < 14) continue;
+    g.add(a);
+  }
+  // The road to Iraq, east.
+  const road = new THREE.Mesh(new THREE.PlaneGeometry(140, 2.6), mat('#b8966a', 1));
+  road.rotation.x = -Math.PI / 2;
+  road.position.set(70, 0.025, 10);
+  road.receiveShadow = true;
+  g.add(road);
+  // A low grave mound, hidden until the end.
+  const grave = new THREE.Mesh(new THREE.SphereGeometry(1.2, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), mat('#9a7a58', 1));
+  grave.scale.set(1.6, 0.4, 0.8);
+  grave.position.set(-10, 0, 6);
+  grave.visible = false;
+  g.add(grave);
+  return {
+    group: g,
+    colliders,
+    ground,
+    points: {
+      arrive: v3(0, 0, 14),
+      hut: v3(-4, 0, -3.4),
+      well: v3(8, 0, 6.4),
+      roadWatch: v3(14, 0, 10),
+      caravanStart: v3(120, 0, 10),
+      grave: v3(-10, 0, 6),
+      s1: v3(-20, 0, 18), s2: v3(22, 0, -18), s3: v3(-24, 0, -20), s4: v3(18, 0, 26),
+    },
+    update() {},
+    ...{ showGrave: () => (grave.visible = true) },
+  } as SceneBase & { showGrave(): void };
+}

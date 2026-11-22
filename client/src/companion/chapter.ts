@@ -14,11 +14,11 @@ import type { Collider } from '../game/mecca';
 import { PlayerController } from '../game/player';
 import type { World } from '../game/world';
 import { esc, modal, modalOpen, toast } from '../ui/ui';
-import { buildGhifar, buildMedina, buildMeccaValley, buildTabuk, type GhifarScene, type MeccaValley, type MedinaScene, type SceneBase, type TabukScene } from './env';
+import { buildDamascus, buildGhifar, buildJabalAmil, buildMedina, buildMeccaValley, buildRabadhah, buildTabuk, sheep, type GhifarScene, type MeccaValley, type MedinaScene, type SceneBase, type TabukScene } from './env';
 import type { Narrator } from './narrator';
 
 type Lang = 'ar' | 'en';
-type SceneName = 'ghifar' | 'mecca' | 'medina' | 'tabuk';
+type SceneName = 'ghifar' | 'mecca' | 'medina' | 'tabuk' | 'damascus' | 'amil' | 'rabadhah';
 
 /** Chapters finished on this device (for the journey map). */
 export function completedChapters(): Set<string> {
@@ -39,6 +39,13 @@ interface Interaction {
 
 const LOOK_ALI: Look = { robe: '#e9e2d0', robeStripe: '#ded6c2', cloak: '#3d4a3a', turban: '#efe8d8', skin: '#a87a55', beard: '#1d1611', beardLength: 'full', cloakLength: 0.9 };
 const LOOK_PROPHET: Look = { robe: '#f4efe2', robeStripe: '#ebe5d6', cloak: '#efe7d6', turban: '#f6f1e6', skin: '#b08560', beard: '#1d1611', beardLength: 'full', cloakLength: 1 };
+const LOOK_HASAN: Look = { robe: '#efe8d8', robeStripe: '#e5ddcb', cloak: '#4a5a46', turban: '#f2ecdf', skin: '#a87a55', beard: '#1d1611', beardLength: 'short', cloakLength: 0.9 };
+const LOOK_HUSAYN: Look = { robe: '#ece4d2', robeStripe: '#e2d9c5', cloak: '#3d4a5a', turban: '#f2ecdf', skin: '#a87a55', beard: '#1d1611', beardLength: 'short', cloakLength: 0.9 };
+const LOOK_AQIL: Look = { robe: '#8a6a4a', robeStripe: '#7e6042', cloak: '#4a3826', turban: '#d8ccb2', skin: '#a77b58', beard: '#7a726a', beardLength: 'full', cloakLength: 1 };
+const LOOK_AMMAR: Look = { robe: '#b8a888', robeStripe: '#ad9d7d', cloak: '#5a4a36', turban: '#e0d6c0', skin: '#8f6a4c', beard: '#d8d2c8', beardLength: 'full', cloakLength: 0.8 };
+const LOOK_DAUGHTER: Look = { robe: '#3a2e2a', robeStripe: '#342a26', cloak: '#2a2220', turban: '#2a2220', skin: '#b08560', beard: null, cloakLength: 1, height: 0.92 };
+const LOOK_ASHTAR: Look = { robe: '#6a5a4a', robeStripe: '#5e5040', cloak: '#3a2e24', turban: '#cfc2a6', skin: '#a77b58', beard: '#2a211b', beardLength: 'full', cloakLength: 1 };
+const LOOK_GUARD: Look = { robe: '#5a3a2a', robeStripe: '#503426', cloak: '#2e241c', turban: '#8a7a5a', skin: '#a77b58', beard: '#2a211b', beardLength: 'short', cloakLength: 0.7 };
 const LOOK_ABBAS: Look = { robe: '#7a5a3a', robeStripe: '#6d5034', cloak: '#3e2a1c', turban: '#d8ccb2', skin: '#a77b58', beard: '#6b625a', beardLength: 'full', cloakLength: 1 };
 const LOOK_QURAYSH = ['#8c3b2a', '#5b4a7a', '#6a5a3a', '#7a2f3f', '#3f5a6a'].map(
   (robe): Look => ({ robe, robeStripe: robe, cloak: '#2e241c', turban: '#cfc2a6', skin: '#a77b58', beard: '#2a211b', beardLength: 'short', cloakLength: 0.7 }),
@@ -56,6 +63,9 @@ export class CompanionChapter {
   private get mecca() { return (this.built.mecca ??= buildMeccaValley()) as MeccaValley; }
   private get medina() { return (this.built.medina ??= buildMedina()) as MedinaScene; }
   private get tabuk() { return (this.built.tabuk ??= buildTabuk()) as TabukScene; }
+  private get damascus() { return (this.built.damascus ??= buildDamascus()); }
+  private get amil() { return (this.built.amil ??= buildJabalAmil()) as SceneBase & { placeSlot(i: number): void }; }
+  private get rabadhah() { return (this.built.rabadhah ??= buildRabadhah()) as SceneBase & { showGrave(): void }; }
   private scene: SceneName = 'ghifar';
   private abuDharr: Character;
   private unays: Character;
@@ -260,11 +270,11 @@ export class CompanionChapter {
 
   // ------------------------------------------------------------------ scene switching
   private firstScene(): SceneName {
-    return ({ seeker: 'ghifar', medina: 'medina', tabuk: 'tabuk' } as Record<string, SceneName>)[this.chapterId] ?? 'ghifar';
+    return ({ seeker: 'ghifar', medina: 'medina', tabuk: 'tabuk', sham: 'damascus', amil: 'amil', rabadhah: 'medina' } as Record<string, SceneName>)[this.chapterId] ?? 'ghifar';
   }
 
   private sceneOf(name: SceneName): SceneBase {
-    return { ghifar: () => this.ghifar, mecca: () => this.mecca, medina: () => this.medina, tabuk: () => this.tabuk }[name]();
+    return { ghifar: () => this.ghifar, mecca: () => this.mecca, medina: () => this.medina, tabuk: () => this.tabuk, damascus: () => this.damascus, amil: () => this.amil, rabadhah: () => this.rabadhah }[name]();
   }
 
   private useScene(name: SceneName, spawn: THREE.Vector3, facing = Math.PI) {
@@ -285,6 +295,9 @@ export class CompanionChapter {
   async start() {
     if (this.chapterId === 'medina') return this.medinaChapter();
     if (this.chapterId === 'tabuk') return this.tabukChapter();
+    if (this.chapterId === 'sham') return this.shamChapter();
+    if (this.chapterId === 'amil') return this.amilChapter();
+    if (this.chapterId === 'rabadhah') return this.rabadhahChapter();
     this.world.setTimeOfDay('day');
     this.useScene('ghifar', this.ghifar.points.spawn!);
     this.place(this.abuDharr, this.ghifar.points.abuDharr!, 0);
@@ -1221,6 +1234,412 @@ export class CompanionChapter {
   }
 
   /** The nearest well, if within range (pass Infinity for the nearest one at any distance). */
+  /** A short reusable helper: wait until a condition is true (checked every frame). */
+  private until(test: () => boolean) {
+    return new Promise<void>((resolve) => {
+      const tick = () => {
+        if (test()) {
+          this.tickers = this.tickers.filter((x) => x !== tick);
+          resolve();
+        }
+      };
+      this.tickers.push(tick);
+    });
+  }
+
+  /** Deliver-style task: pick an item up at `from`, take it to each target in turn. */
+  private deliveries(from: () => THREE.Vector3, kind: string, targets: THREE.Vector3[], pickLabel: L, dropLabel: L, onEach: (i: number) => void) {
+    let given = 0;
+    const served = targets.map(() => false);
+    this.interactions.push({
+      pos: from, radius: 2.2, when: () => !this.carried && given < targets.length,
+      label: () => this.tr(pickLabel),
+      run: () => this.carry(kind),
+    });
+    targets.forEach((tg, i) => {
+      this.interactions.push({
+        pos: () => tg, radius: 2.4, when: () => this.carried?.kind === kind && !served[i],
+        label: () => this.tr(dropLabel),
+        run: () => {
+          served[i] = true;
+          this.drop();
+          given++;
+          onEach(i);
+        },
+      });
+    });
+    return () => given >= targets.length;
+  }
+
+  // ================================================================== chapter 4: Sham
+  private async shamChapter() {
+    const d = this.damascus;
+    const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
+    const P = d.points;
+    this.world.setTimeOfDay('day');
+    this.useScene('damascus', P.arrive!, Math.PI);
+    this.place(this.abuDharr, P.preach!, Math.PI);
+    this.abuDharr.setAnim('talk');
+    this.narrator.preload(['s01', 's02', 's03', 's04']);
+    await this.fade(false, 1200);
+    this.cine(true);
+    this.shot(P.preach!.clone().add(V(7, 4, 9)), P.preach!.clone().add(V(0, 1.5, 0)));
+    await this.narrator.say('s01');
+    this.cine(false);
+
+    // The hungry poor along the street.
+    this.setObjective(objectives.shamPoor);
+    const poorSpots = [P.poor1!, P.poor2!, P.poor3!];
+    const poor = poorSpots.map((p, i) => {
+      const c = this.actor([LOOKS.elder!, LOOKS.wayfarer!, LOOKS.companion2!][i]!);
+      this.place(c, p, i % 2 ? -Math.PI / 2 : Math.PI / 2);
+      c.setAnim('sit');
+      return c;
+    });
+    const fed = this.deliveries(() => P.oven!, 'bread', poorSpots, { ar: 'خذ خبزًا من الفرن', en: 'Take bread from the oven' }, { ar: 'أعطِه الخبز', en: 'Give him the bread' }, (i) => {
+      poor[i]!.setAnim('talk');
+      toast(`${poorSpots.filter((_, k) => poor[k]!.anim === 'talk').length}/3`);
+    });
+    await this.until(fed);
+    this.deed('feed-sham');
+    this.interactions = [];
+
+    // Gather listeners from the market.
+    this.setObjective(objectives.shamListeners);
+    const spots = [P.l1!, P.l2!, P.l3!, P.l4!, P.l5!];
+    let gathered = 0;
+    spots.forEach((sp, i) => {
+      const c = this.actor([LOOKS.townsman!, LOOKS.guide!, LOOKS.wayfarer!, LOOKS.companion1!, LOOKS.townsman!][i]!);
+      this.place(c, sp, Math.random() * 6);
+      let invited = false;
+      this.interactions.push({
+        pos: () => c.root.position, radius: 2.4, when: () => !invited,
+        label: () => (this.lang() === 'ar' ? 'ادعُه ليسمع أبا ذرّ' : 'Invite him to hear Abu Dharr'),
+        run: () => {
+          invited = true;
+          const a = (i / 5) * Math.PI - Math.PI / 2;
+          const seat = P.preach!.clone().add(V(Math.cos(a) * 3.2, 0, Math.sin(a) * 3.2 + 2.4));
+          void this.walk(c, [seat], 2).then(() => {
+            c.root.lookAt(P.preach!.x, 0, P.preach!.z);
+            c.setAnim('sit');
+            gathered++;
+          });
+        },
+      });
+    });
+    await this.until(() => gathered >= 5);
+    this.interactions = [];
+
+    // Mu‘awiya's messenger brings a purse.
+    const messenger = this.actor(LOOK_GUARD);
+    this.place(messenger, P.palaceGate!, Math.PI / 2);
+    this.cine(true);
+    this.shot(P.preach!.clone().add(V(-6, 3.4, 7)), P.preach!.clone().add(V(-1, 1.2, 0)));
+    await this.walk(messenger, [P.preach!.clone().add(V(-1.6, 0, 0.6))], 1.8);
+    messenger.setAnim('talk');
+    await this.narrator.say('s02');
+    this.cine(false);
+    this.setObjective(objectives.shamPurse);
+    messenger.setAnim('idle');
+    await this.walk(messenger, [P.palaceGate!.clone().add(V(1.2, 0, 0))], 2);
+    await new Promise<void>((resolve) => {
+      this.interactions.push(
+        {
+          pos: () => this.abuDharr.root.position, radius: 2.6, when: () => !this.carried && !this.done.has('return-purse'),
+          label: () => (this.lang() === 'ar' ? 'خذ الصرّة لتردّها' : 'Take the purse to return it'),
+          run: () => this.carry('purse'),
+        },
+        {
+          pos: () => messenger.root.position, radius: 2.6, when: () => this.carried?.kind === 'purse',
+          label: () => (this.lang() === 'ar' ? 'ردَّ الصرّة' : 'Hand back the purse'),
+          run: () => {
+            this.drop();
+            this.deed('return-purse');
+            resolve();
+          },
+        },
+      );
+    });
+    this.interactions = [];
+
+    // Habib ibn Maslama's offer, then the letter to ‘Uthman.
+    const habib = this.actor(LOOK_ABBAS);
+    this.place(habib, P.preach!.clone().add(V(-2, 0, 2)), Math.PI * 0.75);
+    habib.setAnim('talk');
+    this.cine(true);
+    this.shot(P.preach!.clone().add(V(-5, 2.8, 5)), P.preach!.clone().add(V(-0.8, 1.2, 0.8)));
+    await this.narrator.say('s03');
+    habib.root.visible = false;
+    const guards = [0, 1].map((i) => {
+      const g = this.actor(LOOK_GUARD);
+      this.place(g, P.palaceGate!.clone().add(V(1, 0, i * 1.5)), Math.PI / 2);
+      return g;
+    });
+    void Promise.all(guards.map((g, i) => this.walk(g, [P.preach!.clone().add(V(-1.2, 0, -1 + i * 2))], 1.8)));
+    this.shot(P.preach!.clone().add(V(6, 5, 8)), P.preach!.clone().add(V(0, 1, 0)));
+    await this.narrator.say('s04');
+    this.setObjective(objectives.shamDone);
+    await this.endChapter('sham', { ar: 'صوتُ الفقراء في الشام', en: 'A Voice for the Poor in Sham' }, ['feed-sham', 'return-purse']);
+  }
+
+  // ================================================================== chapter 5: Jabal Amil
+  private async amilChapter() {
+    const a = this.amil;
+    const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
+    const P = a.points;
+    this.world.setTimeOfDay('day');
+    this.useScene('amil', P.arrive!, Math.PI / 2);
+    this.place(this.abuDharr, P.sarafand!, Math.PI / 2);
+    const villagers = [0, 1, 2, 3].map((i) => {
+      const c = this.actor([LOOKS.wayfarer!, LOOKS.townsman!, LOOKS.companion1!, LOOKS.elder!][i]!);
+      this.place(c, P.sarafand!.clone().add(V(2 + (i % 2) * 1.6, 0, -2 + Math.floor(i / 2) * 2.4)), -Math.PI / 2);
+      c.setAnim('sit');
+      return c;
+    });
+    this.abuDharr.setAnim('talk');
+    this.narrator.preload(['a01', 'a02', 'a03']);
+    await this.fade(false, 1200);
+    this.cine(true);
+    this.shot(P.sarafand!.clone().add(V(-8, 6, 10)), P.sarafand!.clone().add(V(1, 1, 0)));
+    await this.narrator.say('a01', 'a02');
+    this.cine(false);
+    this.abuDharr.setAnim('idle');
+    villagers.forEach((v) => v.setAnim('idle'));
+
+    // Olive harvest and the terrace wall, with the villagers.
+    this.setObjective(objectives.amilOlives);
+    let picked = 0;
+    const trees = [P.o1!, P.o2!, P.o3!, P.o4!, P.o5!];
+    const pickedTree = trees.map(() => false);
+    trees.forEach((tp, i) => {
+      this.interactions.push({
+        pos: () => tp, radius: 2.4, when: () => !pickedTree[i] && (!this.carried || this.carried.kind === 'olives'),
+        label: () => (this.lang() === 'ar' ? 'اجنِ الزيتون' : 'Pick the olives'),
+        run: () => {
+          pickedTree[i] = true;
+          picked++;
+          if (!this.carried) this.carry('olives');
+          toast(`${picked}/5`);
+          this.effects.burst(tp.clone().setY(2), '#6c7a4a', 0.5);
+        },
+      });
+    });
+    this.interactions.push({
+      pos: () => P.press!, radius: 3, when: () => this.carried?.kind === 'olives' && picked >= 5,
+      label: () => (this.lang() === 'ar' ? 'أفرغ الزيتون في المعصرة' : 'Empty the olives into the press'),
+      run: () => {
+        this.drop();
+        this.deed('olive-harvest');
+      },
+    });
+    await this.until(() => this.done.has('olive-harvest'));
+    this.interactions = [];
+    this.setObjective(objectives.amilTerrace);
+    let placed = 0;
+    const stoneSpots = [P.t1!, P.t2!, P.t3!, P.t4!];
+    const stoneMeshes = stoneSpots.map((p) => {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.4, 0.45), new THREE.MeshStandardMaterial({ color: '#b5a68a', roughness: 1 }));
+      m.position.copy(p).setY(0.2);
+      a.group.add(m);
+      return m;
+    });
+    stoneMeshes.forEach((m, i) => {
+      this.interactions.push({
+        pos: () => stoneSpots[i]!, radius: 1.8, when: () => m.visible && !this.carried,
+        label: () => (this.lang() === 'ar' ? 'احمل الحجر' : 'Pick up the stone'),
+        run: () => {
+          m.visible = false;
+          this.carry('stone');
+        },
+      });
+    });
+    this.interactions.push({
+      pos: () => P.wall!, radius: 3.4, when: () => this.carried?.kind === 'stone',
+      label: () => (this.lang() === 'ar' ? 'ضع الحجر في الجدار' : 'Set the stone in the wall'),
+      run: () => {
+        this.drop();
+        a.placeSlot(placed++);
+        if (placed >= 4) this.deed('terrace');
+        else toast(`${placed}/4`);
+      },
+    });
+    await this.until(() => this.done.has('terrace'));
+    this.interactions = [];
+
+    // Up to Mays with Abu Dharr; villagers there gather to listen.
+    this.setObjective(objectives.amilWalk);
+    await this.escort([P.arrive!.clone().add(V(20, 0, -10)), V(10, 0, -36), V(30, 0, -50), P.mays!]);
+    const hill = [0, 1, 2, 3, 4].map((i) => {
+      const c = this.actor([LOOKS.guide!, LOOKS.wayfarer!, LOOKS.townsman!, LOOKS.companion2!, LOOKS.elder!][i]!);
+      const ang = (i / 5) * Math.PI;
+      this.place(c, P.mays!.clone().add(V(Math.cos(ang) * 3.4, 0, Math.sin(ang) * 3.4 - 0.5)), -ang - Math.PI / 2);
+      c.setAnim('sit');
+      return c;
+    });
+    void hill;
+    this.abuDharr.setAnim('talk');
+    this.cine(true);
+    this.shot(P.mays!.clone().add(V(-9, 8, 12)), P.mays!.clone().add(V(0, 1, 0)));
+    await this.narrator.say('a03');
+    this.setObjective(objectives.amilDone);
+    await this.endChapter('amil', { ar: 'في قرى جبل عامل', en: 'In the Villages of Jabal Amil' }, ['olive-harvest', 'terrace']);
+  }
+
+  // ================================================================== chapter 6: al-Rabadhah
+  private async rabadhahChapter() {
+    const m = this.medina;
+    const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
+    this.world.setTimeOfDay('dusk');
+    // The farewell road leaving Medina.
+    this.useScene('medina', m.points.mosqueDoor!.clone().add(V(0, 0, 14)), 0);
+    const start = m.points.mosqueDoor!.clone().add(V(0, 0, 10));
+    this.place(this.abuDharr, start, 0);
+    const ali = this.actor(LOOK_ALI); ali.veil();
+    const hasan = this.actor(LOOK_HASAN); hasan.veil();
+    const husayn = this.actor(LOOK_HUSAYN); husayn.veil();
+    const aqil = this.actor(LOOK_AQIL);
+    const ammar = this.actor(LOOK_AMMAR);
+    const group = [ali, hasan, husayn, aqil, ammar];
+    group.forEach((c, i) => this.place(c, start.clone().add(V(-3 + i * 1.5, 0, -2.5)), 0));
+    this.narrator.preload(['r01', 'r02', 'r03', 'r04', 'r05']);
+    await this.fade(false, 1200);
+    this.cine(true);
+    this.shot(start.clone().add(V(8, 5, 10)), start.clone().add(V(0, 1, 0)));
+    await this.narrator.say('r01');
+    this.cine(false);
+    this.setObjective(objectives.rabFarewell);
+    // Everyone walks south out of town together; the player keeps pace.
+    const road = [start.clone().add(V(0, 0, 20)), start.clone().add(V(0, 0, 42))];
+    group.forEach((c, i) => void this.walk(c, road.map((p) => p.clone().add(V(-3 + i * 1.5, 0, -2.5))), 1.5));
+    await this.escort(road);
+    const stop = road[1]!;
+    group.forEach((c, i) => {
+      c.root.position.copy(stop.clone().add(V(-3 + i * 1.5, 0, -2.5)));
+      c.root.lookAt(stop.x, 0, stop.z + 2);
+      c.setAnim('idle');
+    });
+    this.abuDharr.root.position.copy(stop.clone().add(V(0, 0, 1.5)));
+    this.abuDharr.root.rotation.y = Math.PI;
+    this.cine(true);
+    const speak = async (who: Character, line: string) => {
+      who.setAnim('talk');
+      this.shot(who.root.position.clone().add(V(2.4, 2, 3.4)), who.root.position.clone().add(V(0, 1.3, 0)));
+      await this.narrator.say(line);
+      who.setAnim('idle');
+    };
+    await speak(ali, 'r02');
+    this.shot(stop.clone().add(V(5, 2.8, 6)), stop.clone().add(V(0, 1.2, 0)));
+    aqil.setAnim('talk');
+    await this.narrator.say('r03');
+    aqil.setAnim('idle');
+    await speak(husayn, 'r04');
+    this.abuDharr.setAnim('yield');
+    this.shot(this.abuDharr.root.position.clone().add(V(-2.6, 1.9, 3.4)), this.abuDharr.root.position.clone().add(V(0, 1.2, 0)));
+    await this.narrator.say('r05');
+    await this.fade(true, 1200);
+    group.forEach((c) => (c.root.visible = false));
+    await this.titleCard({ ar: 'الربذة', en: 'al-Rabadhah' });
+
+    // al-Rabadhah: tend his few sheep.
+    const rb = this.rabadhah;
+    const R = rb.points;
+    this.world.setTimeOfDay('day');
+    this.useScene('rabadhah', R.arrive!, Math.PI);
+    this.place(this.abuDharr, R.hut!, 0);
+    this.abuDharr.setAnim('sit');
+    const daughter = this.actor(LOOK_DAUGHTER);
+    this.place(daughter, R.hut!.clone().add(V(2, 0, 0.6)), 0);
+    this.cine(false);
+    await this.fade(false, 1000);
+    this.setObjective(objectives.rabFlock);
+    const flock = [R.s1!, R.s2!, R.s3!, R.s4!].map((p) => {
+      const sh = sheep();
+      sh.position.copy(p);
+      rb.group.add(sh);
+      return { mesh: sh, led: false, home: false };
+    });
+    flock.forEach((f, i) => {
+      this.interactions.push({
+        pos: () => f.mesh.position, radius: 2.2, when: () => !f.led,
+        label: () => (this.lang() === 'ar' ? 'سُق الشاة إلى البئر' : 'Lead the sheep to the well'),
+        run: () => {
+          f.led = true;
+          const target = R.well!.clone().add(V(-1.5 + (i % 2) * 3, 0, 1.5 + Math.floor(i / 2) * 1.2));
+          this.tickers.push((dt) => {
+            const d2 = target.clone().sub(f.mesh.position).setY(0);
+            if (d2.length() < 0.3) {
+              f.home = true;
+              return;
+            }
+            f.mesh.position.addScaledVector(d2.normalize(), Math.min(2.2 * dt, d2.length()));
+            f.mesh.rotation.y = Math.atan2(d2.x, d2.z) - Math.PI / 2;
+          });
+        },
+      });
+    });
+    await this.until(() => flock.every((f) => f.home));
+    this.interactions = [];
+    this.deed('tend-flock');
+    await wait(1200);
+    await this.fade(true, 1200);
+    await this.titleCard({ ar: 'وبعد زمن…', en: 'Some time later…' });
+
+    // Hunger, his last words to his daughter, and his death.
+    flock.forEach((f) => (f.mesh.visible = false));
+    this.world.setTimeOfDay('dusk');
+    this.place(daughter, R.hut!.clone().add(V(1.2, 0, 1)), Math.PI * 0.8);
+    daughter.setAnim('sit');
+    this.cine(true);
+    this.shot(R.hut!.clone().add(V(5, 2.6, 6)), R.hut!.clone().add(V(0, 0.8, 0.5)));
+    await this.fade(false, 1200);
+    this.narrator.preload(['r06', 'r07', 'r08']);
+    await this.narrator.say('r06');
+    // His passing is not shown; only his daughter waiting by the road.
+    this.abuDharr.root.visible = false;
+    this.world.setTimeOfDay('night');
+    this.place(daughter, R.roadWatch!.clone().add(V(-2, 0, 1.4)), Math.PI / 2);
+    daughter.setAnim('sit');
+    this.player.position.copy(R.roadWatch!.clone().add(V(-1, 0, -2)));
+    this.player.snapCamera();
+    this.cine(false);
+    this.setObjective(objectives.rabWatch);
+    // Travellers appear far down the road to Iraq after a while.
+    await wait(9000 / Math.max(1, this.timeScale));
+    const travellers = [LOOK_ASHTAR, LOOKS.guide!, LOOKS.wayfarer!, LOOKS.townsman!].map((look, i) => {
+      const c = this.actor(look);
+      this.place(c, R.caravanStart!.clone().add(V(i * 1.4, 0, (i % 2) * 1.2)), -Math.PI / 2);
+      return c;
+    });
+    const lantern = new THREE.PointLight('#ffb35a', 18, 14, 1.6);
+    travellers[0]!.root.add(lantern);
+    lantern.position.set(0.3, 1.6, 0.4);
+    toast(this.lang() === 'ar' ? 'ضوءٌ يقترب على طريق العراق!' : 'A light is coming along the road from Iraq!', 'warn');
+    travellers.forEach((c, i) => void this.walk(c, [R.roadWatch!.clone().add(V(30 + i * 1.4, 0, (i % 2) * 1.2))], 3));
+    await this.until(() => this.player.position.distanceTo(travellers[0]!.root.position) < 4);
+    this.deed('keep-watch');
+    // They come, wash and shroud him, and bury him.
+    await this.fade(true, 1200);
+    rb.showGrave();
+    this.world.setTimeOfDay('dusk');
+    travellers.forEach((c, i) => {
+      this.place(c, R.grave!.clone().add(V(-2 + i * 1.3, 0, 2.2)), Math.PI);
+      c.setAnim('idle');
+    });
+    this.place(daughter, R.grave!.clone().add(V(3.2, 0, 1)), -Math.PI / 2);
+    daughter.setAnim('sit');
+    this.player.position.copy(R.grave!.clone().add(V(-3.2, 0, 3)));
+    this.cine(true);
+    travellers[0]!.setAnim('talk');
+    this.shot(R.grave!.clone().add(V(4, 2.6, 7)), R.grave!.clone().add(V(0, 0.8, 1)));
+    await this.fade(false, 1200);
+    await this.narrator.say('r07');
+    travellers[0]!.setAnim('idle');
+    this.shot(R.grave!.clone().add(V(16, 14, 22)), R.grave!.clone());
+    await this.narrator.say('r08');
+    this.setObjective(objectives.rabDone);
+    await this.endChapter('rabadhah', { ar: 'الوداع في الربذة', en: 'Farewell at al-Rabadhah' }, ['tend-flock', 'keep-watch']);
+  }
+
   private nearWell(tb: TabukScene, within: number) {
     const p = this.player.position;
     const w = [...tb.wells].sort((a, b) => a.distanceTo(p) - b.distanceTo(p))[0]!;
@@ -1282,6 +1701,9 @@ export class CompanionChapter {
         return p;
       },
       stone: () => new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.38, 0.42), new THREE.MeshStandardMaterial({ color: '#9c8a72', roughness: 0.95 })),
+      bread: () => new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.08, 14), new THREE.MeshStandardMaterial({ color: '#c08a4a', roughness: 1 })),
+      purse: () => new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 8), new THREE.MeshStandardMaterial({ color: '#8a6a2a', roughness: 0.6 })),
+      olives: () => new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.24, 0.32, 12), new THREE.MeshStandardMaterial({ color: '#6c7a4a', roughness: 1 })),
       dates: () => new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.24, 0.36, 12), new THREE.MeshStandardMaterial({ color: '#8a6a3a', roughness: 1 })),
       load: () => {
         const b = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.45, 0.4), new THREE.MeshStandardMaterial({ color: '#6b4a2e', roughness: 1 }));
@@ -1301,7 +1723,7 @@ export class CompanionChapter {
     this.carried = { kind, mesh };
     const chip = this.el('.carry-chip');
     chip.hidden = false;
-    chip.textContent = { bucket: '🪣', pole: '🪵', stone: '🪨', water: '💧', dates: '🌴', load: '🎒' }[kind] ?? '•';
+    chip.textContent = { bucket: '🪣', pole: '🪵', stone: '🪨', water: '💧', dates: '🌴', load: '🎒', bread: '🍞', purse: '👛', olives: '🫒' }[kind] ?? '•';
   }
 
   private drop() {

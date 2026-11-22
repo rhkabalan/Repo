@@ -28,6 +28,18 @@ const WARRAM = { en: 'Warram, Tanbih al-Khawatir, vol. 2, pp. 300–314', ar: '�
 const MAANI = { en: 'al-Saduq, Maʿani al-Akhbar (narrated from Imam al-Sadiq)', ar: 'الصدوق، معاني الأخبار (عن الإمام الصادق)' };
 const KHARAIJ = { en: 'al-Majlisi, Bihar al-Anwar, vol. 22, p. 433 (from al-Rawandi, al-Khara’ij)', ar: 'المجلسي، بحار الأنوار، ج ٢٢، ص ٤٣٣ (عن الراوندي، الخرائج)' };
 const MESSAGE = { en: 'Jaʿfar Subhani, The Message, ch. 53', ar: 'جعفر السبحاني، الرسالة، الفصل ٥٣' };
+const AYAN_355 = { en: 'Muhsin al-Amin, Aʿyan al-Shiʿa, vol. 16, pp. 355–356', ar: 'محسن الأمين، أعيان الشيعة، ج ١٦، ص ٣٥٥–٣٥٦' };
+const AYAN_358 = { en: 'Muhsin al-Amin, Aʿyan al-Shiʿa, vol. 16, p. 358', ar: 'محسن الأمين، أعيان الشيعة، ج ١٦، ص ٣٥٨' };
+const AYAN_364 = { en: 'Muhsin al-Amin, Aʿyan al-Shiʿa, vol. 16, p. 364 (from al-Tusi, al-Amali)', ar: 'محسن الأمين، أعيان الشيعة، ج ١٦، ص ٣٦٤ (عن أمالي الطوسي)' };
+const AYAN_372 = { en: 'Muhsin al-Amin, Aʿyan al-Shiʿa, vol. 16, pp. 372–373', ar: 'محسن الأمين، أعيان الشيعة، ج ١٦، ص ٣٧٢–٣٧٣' };
+const GHADIR = { en: 'al-Amini, al-Ghadir, vol. 8, p. 293', ar: 'الأميني، الغدير، ج ٨، ص ٢٩٣' };
+const YAQUBI = { en: 'al-Yaʿqubi, Tarikh, vol. 2, p. 172', ar: 'اليعقوبي، التاريخ، ج ٢، ص ١٧٢' };
+const MASUDI = { en: 'al-Masʿudi, Muruj al-Dhahab, vol. 2, pp. 340–341', ar: 'المسعودي، مروج الذهب، ج ٢، ص ٣٤٠–٣٤١' };
+const JABAL_AMIL = { en: 'Jabal ʿAmil fi al-Tarikh, vol. 1, pp. 49–54 (Ahmad Rida)', ar: 'جبل عامل في التاريخ، ج ١، ص ٤٩–٥٤ (أحمد رضا)' };
+const KAFI8 = { en: 'al-Kulayni, al-Kafi, vol. 8, p. 207, no. 251', ar: 'الكليني، الكافي، ج ٨، ص ٢٠٧، ح ٢٥١' };
+const NAHJ130 = { en: 'Nahj al-Balagha, Sermon 130', ar: 'نهج البلاغة، الخطبة ١٣٠' };
+const QUMMI = { en: 'Tafsir ʿAli ibn Ibrahim al-Qummi (on Tabuk), in Aʿyan al-Shiʿa', ar: 'تفسير علي بن إبراهيم القمّي (غزوة تبوك)، في أعيان الشيعة' };
+const AL_FAQIH_3 = { en: 'Al al-Faqih, Abu Dharr al-Ghifari: Ramz al-Yaqaza, chs. 2–3', ar: 'آل الفقيه، أبو ذر الغفاري رمز اليقظة، الفصلان ٢–٣' };
 
 export const narration: NarrationLine[] = [
   {
@@ -207,6 +219,114 @@ export const narration: NarrationLine[] = [
       en: 'The army reached Tabuk. It met no Roman army, no battle was fought, and it returned to Medina.',
     },
   },
+  // ---------------------------------------------------------------- chapter 4: Sham
+  {
+    id: 's01', sourced: true, sources: [AYAN_355, AL_FAQIH_3],
+    text: {
+      ar: 'أقامَ أبو ذرّ في الشام زمنًا طويلًا. وكان يقومُ كلَّ يوم فيعظُ الناس، ويأمرُهم بطاعةِ الله، ويروي ما سمعَه من رسولِ الله في فضائلِ أهلِ بيته، ويحضُّهم على التمسّكِ بعترته.',
+      en: 'Abu Dharr lived in Sham for a long time. Every day he stood and admonished the people, urged them to obey God, related what he had heard from the Messenger of God in praise of his family, and urged them to hold fast to his Household.',
+    },
+  },
+  {
+    id: 's02', sourced: true, sources: [GHADIR, YAQUBI],
+    text: {
+      ar: 'وكان يُنكرُ على معاويةَ أشياءَ يفعلُها، فبعثَ إليه معاويةُ يومًا ثلاثمئةِ دينار. فقال لرسولِه: إن كانت من عطائي الذي حرمتُمونيه عامي هذا قبلتُها، وإن كانت صِلةً فلا حاجةَ لي فيها. وردَّها عليه.',
+      en: 'He objected to things Mu‘awiya did, and one day Mu‘awiya sent him three hundred dinars. He told the messenger: "If this is my stipend that you withheld from me this year, I will accept it; if it is a gift, I have no need of it." And he sent it back.',
+    },
+  },
+  {
+    id: 's03', sourced: true, sources: [AYAN_364],
+    text: {
+      ar: 'وقال له حبيبُ بنُ مسلمة: لك عندي يا أبا ذرّ ألفُ درهمٍ وخادمٌ وخمسمئةِ شاة. فقال: أعطِ خادمَك وألفَك وشُويهاتِك مَن هو أحوجُ إليها منّي، فإنّي إنّما أسألُ حقّي في كتابِ الله.',
+      en: 'Habib ibn Maslama said to him: "Abu Dharr, I have for you a thousand dirhams, a servant and five hundred sheep." He replied: "Give your servant, your thousand and your sheep to someone who needs them more than I do. I only ask for my right in the Book of God."',
+    },
+  },
+  {
+    id: 's04', sourced: true, sources: [MASUDI, AL_FAQIH_3],
+    text: {
+      ar: 'فكتبَ معاويةُ إلى عثمان: إنّ أبا ذرٍّ تجتمعُ إليه الجموع، ولا آمنُ أن يُفسدَهم عليك. فاستدعاه عثمانُ إلى المدينة.',
+      en: 'So Mu‘awiya wrote to ‘Uthman: "Crowds gather around Abu Dharr, and I do not feel safe that he will not turn them against you." And ‘Uthman summoned him to Medina.',
+    },
+  },
+  // ---------------------------------------------------------------- chapter 5: Jabal Amil (tradition)
+  {
+    id: 'a01', sourced: true, sources: [AYAN_358],
+    text: {
+      ar: 'قال السيّدُ محسنُ الأمين في أعيانِ الشيعة: ومن المشهورِ أنّ تشيّعَ جبلِ عاملٍ كان على يدِ أبي ذرّ، وأنّه لمّا كان يقولُ في دمشقَ ما يقول، أخرجَه معاويةُ إلى قرى الشام، فجعلَ ينشرُ فيها فضائلَ أهلِ البيت.',
+      en: 'Sayyid Muhsin al-Amin wrote in A‘yan al-Shi‘a: It is well known that the people of Jabal Amil came to follow the Ahl al-Bayt through Abu Dharr; when he spoke out in Damascus, Mu‘awiya sent him to the villages of Sham, and there he spread the virtues of the Ahl al-Bayt.',
+    },
+  },
+  {
+    id: 'a02', sourced: true, sources: [AYAN_358],
+    text: {
+      ar: 'ثم قال: وهذا وإن لم يرِدْ به خبرٌ مُسنَد، لكنّه قريبٌ غيرُ مستبعَد.',
+      en: 'And he added: "Although no narration with a chain of transmitters reports this, it is close to the truth and not unlikely."',
+    },
+  },
+  {
+    id: 'a03', sourced: true, sources: [JABAL_AMIL, AL_FAQIH_3],
+    text: {
+      ar: 'ويُروى أنّه كان يخرجُ إلى الساحل، فله مقامٌ في قريةِ الصَّرفند القريبةِ من صيدا، ومقامٌ آخرُ في قريةِ ميس المُشرفةِ على غَورِ الأردن، والمقامان معروفانِ إلى اليوم.',
+      en: 'It is related that he would go down to the coast: he has a shrine in the village of Sarafand near Sidon, and another in the village of Mays overlooking the Jordan valley, and both are known to this day.',
+    },
+  },
+  // ---------------------------------------------------------------- chapter 6: al-Rabadhah
+  {
+    id: 'r01', sourced: true, sources: [MASUDI, KAFI8],
+    text: {
+      ar: 'ولمّا أُخرجَ أبو ذرّ إلى الربذة، أمرَ عثمانُ ألّا يكلّمَه أحدٌ ولا يشيّعَه. فخرجَ معه أميرُ المؤمنين عليٌّ، والحسنُ والحسين، وعقيل، وعمّارُ بنُ ياسر، يودّعونه.',
+      en: 'When Abu Dharr was sent out to al-Rabadhah, ‘Uthman ordered that no one speak to him or see him off. But the Commander of the Faithful Ali, al-Hasan, al-Husayn, ‘Aqil and ‘Ammar ibn Yasir went out with him to bid him farewell.',
+    },
+  },
+  {
+    id: 'r02', sourced: true, sources: [NAHJ130, KAFI8],
+    text: {
+      ar: 'فقال عليّ: يا أبا ذرّ، إنّك غضبتَ لله فارجُ مَن غضبتَ له. إنّ القومَ خافوك على دنياهم وخِفتَهم على دينك، فاتركْ في أيديهم ما خافوك عليه، واهربْ منهم بما خِفتَهم عليه. لا يُؤنسنَّك إلّا الحقّ، ولا يُوحشنَّك إلّا الباطل.',
+      en: 'Ali said: "Abu Dharr, you became angry for God, so place your hope in Him. These people feared you for their world, and you feared them for your faith. Leave in their hands what they feared you for, and flee from them with what you feared them for. Let nothing keep you company but the truth, and let nothing frighten you but falsehood."',
+    },
+  },
+  {
+    id: 'r03', sourced: true, sources: [KAFI8],
+    text: {
+      ar: 'وقال عقيل: اتّقِ الله، فإنّ التقوى نجاة، واصبرْ، فإنّ الصبرَ كرم. وقال الحسن: يا عمّاه، اصبرْ حتى تلقى نبيَّك وهو عنك راض.',
+      en: '‘Aqil said: "Fear God, for piety is salvation; and be patient, for patience is nobility." Al-Hasan said: "Uncle, be patient until you meet your Prophet, and he is pleased with you."',
+    },
+  },
+  {
+    id: 'r04', sourced: true, sources: [KAFI8],
+    text: {
+      ar: 'وقال الحسين: يا عمّاه، إنّ اللهَ قادرٌ أن يغيّرَ ما ترى. قد منعَك القومُ دنياهم ومنعتَهم دينَك، فما أغناك عمّا منعوك، وأحوجَهم إلى ما منعتَهم. وقال عمّار: لا آنسَ اللهُ مَن أوحشَك، ولا آمنَ مَن أخافك.',
+      en: 'Al-Husayn said: "Uncle, God is able to change what you see. They withheld their world from you, and you withheld your faith from them. How little you need what they withheld, and how much they need what you withheld." ‘Ammar said: "May God give no comfort to whoever made you lonely, and no safety to whoever made you afraid."',
+    },
+  },
+  {
+    id: 'r05', sourced: true, sources: [KAFI8],
+    text: {
+      ar: 'فبكى أبو ذرّ، وكان شيخًا كبيرًا، وقال: رحمكم اللهُ يا أهلَ بيتِ الرحمة، إذا رأيتُكم ذكرتُ بكم رسولَ الله. ما لي بالمدينةِ سكنٌ غيرُكم.',
+      en: 'Abu Dharr wept, for he was an old man, and said: "May God have mercy on you, O People of the House of mercy. When I see you, I remember the Messenger of God through you. I have no one in Medina to find rest with but you."',
+    },
+  },
+  {
+    id: 'r06', sourced: true, sources: [QUMMI, AYAN_372],
+    text: {
+      ar: 'وفي الربذة ماتت غُنيماتُه، وأصابه الجوع. فقال لابنته: يا بُنيّة لا تخافي، فإنّي إذا متُّ جاءكِ من أهلِ العراق مَن يكفيكِ أمري، فإنّ حبيبي رسولَ الله أخبرَني بذلك في غزوةِ تبوك. فلمّا ماتَ قعدَتْ على طريقِ العراق.',
+      en: 'In al-Rabadhah his few sheep died and hunger struck him. He told his daughter: "Do not be afraid, my daughter. When I die, people from Iraq will come who will take care of me; my beloved, the Messenger of God, told me so on the expedition to Tabuk." When he died, she sat by the road to Iraq.',
+    },
+  },
+  {
+    id: 'r07', sourced: true, sources: [AYAN_372, QUMMI],
+    text: {
+      ar: 'فجاءَ نفرٌ فيهم مالكُ الأشتر، فغسّلوه وكفّنوه ودفنوه. وقامَ الأشترُ على قبرِه فقال: اللهمّ هذا أبو ذرّ صاحبُ رسولِك، عبدَك في العابدين، لم يغيّرْ ولم يبدّل، ولكنّه رأى منكرًا فغيّرَه بلسانِه وقلبِه، ثم ماتَ وحيدًا غريبًا.',
+      en: 'A group came, Malik al-Ashtar among them; they washed him, shrouded him and buried him. Al-Ashtar stood over his grave and said: "O God, this is Abu Dharr, companion of Your Messenger. He worshipped You among the worshippers. He did not change, he did not alter; he saw wrong and changed it with his tongue and his heart, and then he died alone, a stranger."',
+    },
+  },
+  {
+    id: 'r08', sourced: false, sources: [],
+    text: {
+      ar: 'هنا تنتهي رحلتُك مع أبي ذرّ: من خيمةٍ في صحراءِ غِفار إلى قبرٍ في الربذة. مشى وحدَه، وماتَ وحدَه، وبقيَ صوتُه للحقّ.',
+      en: 'Here your journey with Abu Dharr ends: from a tent in the desert of Ghifar to a grave at al-Rabadhah. He walked alone, he died alone, and his voice for the truth remained.',
+    },
+  },
 ];
 
 /** Good deeds the player can do. Each shows a Qur'an verse; the game never claims to know God's actual reward. */
@@ -286,6 +406,42 @@ export const deeds: Deed[] = [
     ref: { ar: 'سورة المائدة ٢', en: "Qur'an 5:2" },
   },
   {
+    id: 'feed-sham', hasanat: 20,
+    title: { ar: 'حملتَ الخبزَ إلى فقراء دمشق', en: 'You carried bread to the poor of Damascus' },
+    verse: { ar: '﴿وَفِي أَمْوَالِهِمْ حَقٌّ لِّلسَّائِلِ وَالْمَحْرُومِ﴾', en: '"And in their wealth there is a right for the beggar and the deprived."' },
+    ref: { ar: 'سورة الذاريات ١٩', en: "Qur'an 51:19" },
+  },
+  {
+    id: 'return-purse', hasanat: 20,
+    title: { ar: 'رددتَ الصرّةَ إلى رسولِ معاوية', en: 'You returned the purse to Mu‘awiya’s messenger' },
+    verse: { ar: '﴿وَالَّذِينَ يَكْنِزُونَ الذَّهَبَ وَالْفِضَّةَ وَلَا يُنفِقُونَهَا فِي سَبِيلِ اللَّهِ فَبَشِّرْهُم بِعَذَابٍ أَلِيمٍ﴾', en: '"Those who hoard gold and silver and do not spend it in the way of God, give them tidings of a painful punishment."' },
+    ref: { ar: 'سورة التوبة ٣٤', en: "Qur'an 9:34" },
+  },
+  {
+    id: 'olive-harvest', hasanat: 20,
+    title: { ar: 'جنيتَ الزيتونَ مع أهل القرية', en: 'You harvested olives with the villagers' },
+    verse: { ar: '﴿وَالتِّينِ وَالزَّيْتُونِ﴾', en: '"By the fig and the olive."' },
+    ref: { ar: 'سورة التين ١', en: "Qur'an 95:1" },
+  },
+  {
+    id: 'terrace', hasanat: 20,
+    title: { ar: 'رمّمتَ جدارَ مدرّجٍ لفلّاح', en: 'You rebuilt a farmer’s terrace wall' },
+    verse: { ar: '﴿وَتَعَاوَنُوا عَلَى الْبِرِّ وَالتَّقْوَى﴾', en: '"Help one another in goodness and piety."' },
+    ref: { ar: 'سورة المائدة ٢', en: "Qur'an 5:2" },
+  },
+  {
+    id: 'tend-flock', hasanat: 20,
+    title: { ar: 'رعيتَ غنمَ أبي ذرّ وسقيتَها', en: 'You tended and watered Abu Dharr’s sheep' },
+    verse: { ar: '﴿وَمَا مِن دَابَّةٍ فِي الْأَرْضِ إِلَّا عَلَى اللَّهِ رِزْقُهَا﴾', en: '"There is no creature on earth but its provision rests with God."' },
+    ref: { ar: 'سورة هود ٦', en: "Qur'an 11:6" },
+  },
+  {
+    id: 'keep-watch', hasanat: 30,
+    title: { ar: 'سهرتَ على الطريق حتى جاء المؤمنون', en: 'You kept watch on the road until the believers came' },
+    verse: { ar: '﴿إِنَّا لِلَّهِ وَإِنَّا إِلَيْهِ رَاجِعُونَ﴾', en: '"Indeed we belong to God, and to Him we shall return."' },
+    ref: { ar: 'سورة البقرة ١٥٦', en: "Qur'an 2:156" },
+  },
+  {
     id: 'shield', hasanat: 30,
     title: { ar: 'وقفتَ دونَ أبي ذرّ حين ثار عليه القوم', en: 'You stood by Abu Dharr when the crowd rose against him' },
     verse: { ar: '﴿وَمَا لَكُمْ لَا تُقَاتِلُونَ فِي سَبِيلِ اللَّهِ وَالْمُسْتَضْعَفِينَ﴾', en: '"And why should you not strive in the cause of God and of the oppressed?"' },
@@ -313,6 +469,18 @@ export const objectives = {
   tabukCarry: { ar: 'تعبَ بعيرُ أبي ذرّ. احملْ بعضَ متاعه وأدركا الجيش.', en: 'Abu Dharr’s camel is worn out. Carry part of his load and catch up with the army.' },
   medinaDone: { ar: 'اكتمل فصل المدينة.', en: 'The Medina chapter is complete.' },
   tabukDone: { ar: 'اكتمل فصل طريق تبوك.', en: 'The road to Tabuk is complete.' },
+  shamPoor: { ar: 'في سوق دمشق فقراء جائعون. احمل الخبزَ من الفرن إلى ثلاثة منهم.', en: 'There are hungry poor in the Damascus market. Carry bread from the oven to three of them.' },
+  shamListeners: { ar: 'أبو ذرّ يعظ الناس عند العمود الكبير. ادعُ خمسةً من أهل السوق ليسمعوا.', en: 'Abu Dharr is teaching by the great column. Invite five people from the market to listen.' },
+  shamPurse: { ar: 'خذ الصرّة من أبي ذرّ وردّها إلى رسولِ معاوية عند باب القصر.', en: 'Take the purse from Abu Dharr and return it to Mu‘awiya’s messenger at the palace gate.' },
+  amilOlives: { ar: 'ساعد أهل القرية: اجنِ الزيتون من خمس شجرات واحمله إلى المعصرة.', en: 'Help the villagers: pick olives from five trees and carry them to the press.' },
+  amilTerrace: { ar: 'جدار مدرّجٍ انهار. أعد أحجاره الأربعة إلى مكانها.', en: 'A terrace wall has collapsed. Put its four stones back.' },
+  amilWalk: { ar: 'سِرْ مع أبي ذرّ من الساحل إلى قرية ميس على التلّ.', en: 'Walk with Abu Dharr from the coast up to the hill village of Mays.' },
+  rabFarewell: { ar: 'سِرْ مع المودّعين خلف أبي ذرّ إلى طريق الربذة.', en: 'Walk with those seeing Abu Dharr off, out to the road to al-Rabadhah.' },
+  rabFlock: { ar: 'في الربذة: اجمع غنمات أبي ذرّ الأربع واسقِها من البئر.', en: 'At al-Rabadhah: gather Abu Dharr’s four sheep and water them at the well.' },
+  rabWatch: { ar: 'ابنته تنتظر على طريق العراق. راقب الأفق، فإذا رأيت قافلةً فاذهب إليها.', en: 'His daughter waits by the road to Iraq. Watch the horizon, and when you see travellers, go to them.' },
+  shamDone: { ar: 'اكتمل فصل الشام.', en: 'The Sham chapter is complete.' },
+  amilDone: { ar: 'اكتمل فصل جبل عامل.', en: 'The Jabal Amil chapter is complete.' },
+  rabDone: { ar: 'اكتملت الرحلة.', en: 'The journey is complete.' },
 } satisfies Record<string, L>;
 
 /** Abu Dharr's path, in order. Positions are latitude/longitude for the journey map. */
@@ -353,21 +521,21 @@ export const journey: JourneyStop[] = [
     summary: { ar: 'يعيا بعيرُه فيحمل متاعه ويمشي وحده، فيقول النبيّ: «يمشي وحده، ويموت وحده».', en: 'His camel gives out, he carries his load and walks alone, and the Prophet says: “He walks alone, and will die alone.”' },
   },
   {
-    id: 'sham', chapter: 4, playable: false, lat: 33.51, lon: 36.29,
+    id: 'sham', chapter: 4, playable: true, lat: 33.51, lon: 36.29,
     title: { ar: 'صوتُ الفقراء في الشام', en: 'A Voice for the Poor in Sham' },
     place: { ar: 'دمشق', en: 'Damascus' },
     date: { ar: 'نحو ٦٤٥–٦٥١ م', en: 'c. 645–651 CE' },
     summary: { ar: 'ينكر كنز الذهب والفضة، ويردّ عطايا معاوية، فيكتب معاوية إلى عثمان.', en: 'He speaks against hoarding gold and silver and refuses Mu‘awiya’s gifts; Mu‘awiya writes to ‘Uthman.' },
   },
   {
-    id: 'amil', chapter: 5, playable: false, tradition: true, lat: 33.3, lon: 35.4,
+    id: 'amil', chapter: 5, playable: true, tradition: true, lat: 33.3, lon: 35.4,
     title: { ar: 'في قرى جبل عامل', en: 'In the Villages of Jabal Amil' },
     place: { ar: 'الصرفند وميس الجبل', en: 'Sarafand and Mays al-Jabal' },
     date: { ar: 'نحو ٦٤٥–٦٥١ م (رواية متوارثة)', en: 'c. 645–651 CE (reported tradition)' },
     summary: { ar: 'يتوارث أهل جبل عامل أنّ تشيّعهم كان على يده، وله مقامان في الصرفند وميس.', en: 'The people of Jabal Amil hold that their love for the Ahl al-Bayt began with him; shrines at Sarafand and Mays carry his name.' },
   },
   {
-    id: 'rabadhah', chapter: 6, playable: false, lat: 24.64, lon: 41.3,
+    id: 'rabadhah', chapter: 6, playable: true, lat: 24.64, lon: 41.3,
     title: { ar: 'الوداع في الربذة', en: 'Farewell at al-Rabadhah' },
     place: { ar: 'الربذة', en: 'al-Rabadhah' },
     date: { ar: 'نحو ٦٥١–٦٥٣ م', en: 'c. 651–653 CE' },
