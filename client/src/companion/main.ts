@@ -48,8 +48,8 @@ const T = {
   start: { ar: 'ابدأ الرحلة', en: 'Begin the journey' },
   lang: { ar: 'English', en: 'العربية' },
   controls: {
-    ar: 'التحكّم: WASD أو العصا على الشاشة للمشي، E للتفاعل، نقرة أو J للضرب، زرّ الفأرة الأيمن أو K للصدّ، Space للتفادي، C للتخفّي، N لتخطّي الراوي.',
-    en: 'Controls: WASD or the on-screen stick to move, E to interact, click or J to strike, right mouse or K to block, Space to dodge, C to sneak, N to skip narration.',
+    ar: 'التحكّم: WASD أو العصا على الشاشة للمشي. اسحب على الشاشة لتنظر حولك، وقرّب أو أبعد بإصبعين أو بعجلة الفأرة (Q وR لتدوير الكاميرا). E للتفاعل، نقرة أو J للضرب، زرّ الفأرة الأيمن أو K للصدّ، Space للتفادي، C للتخفّي، N لتخطّي الراوي.',
+    en: 'Controls: WASD or the on-screen stick to move. Drag on the screen to look around; pinch or scroll to zoom (Q and R turn the camera). E to interact, click or J to strike, right mouse or K to block, Space to dodge, C to sneak, N to skip narration.',
   },
   traveler: { ar: 'المسافر', en: 'The Traveler' },
   steadfast: { ar: 'الثابت', en: 'The Steadfast' },

@@ -264,7 +264,7 @@ export function buildGhifar(): GhifarScene {
   block(9.5, 2, 1, 3.3);
 
   const camels: THREE.Group[] = [];
-  for (const [x, z, ry] of [[12.5, 0, 2.9], [12.8, 3.6, 3.3], [15, -2, 2.4], [16, 5, 3.6]] as const) {
+  for (const [x, z, ry] of [[12.5, -0.5, 2.9], [12.8, 2, 3.3], [15.5, -3, 2.4], [16.8, 0.8, 3.6]] as const) {
     const c = camel(r() > 0.5 ? '#b38a5a' : '#a07a4e');
     c.position.set(x, 0, z);
     c.rotation.y = ry;

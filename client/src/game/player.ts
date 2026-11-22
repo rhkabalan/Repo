@@ -12,6 +12,9 @@ export class PlayerController {
   readonly velocity = new THREE.Vector3();
   /** Camera sits at player + (sin yaw, cos yaw) * distance; 0 = behind a player facing -z. */
   private camYaw = 0;
+  /** Camera elevation angle (radians) and distance; the player can change both. */
+  private camPitch = 0.42;
+  private camDist = 10;
   private readonly camPos = new THREE.Vector3();
   private readonly lookAt = new THREE.Vector3();
   moving = false;
@@ -127,7 +130,7 @@ export class PlayerController {
   }
 
   private desiredCamera(out: THREE.Vector3) {
-    const maxDist = 7.5;
+    const maxDist = this.camDist * Math.cos(this.camPitch);
     const sx = Math.sin(this.camYaw);
     const sz = Math.cos(this.camYaw);
     let dist = maxDist;
@@ -139,7 +142,9 @@ export class PlayerController {
         break;
       }
     }
-    const height = 1.6 + (dist / maxDist) * 2.6;
+    // When a wall shortens the boom, rise higher so the player can still see over it.
+    const blocked = 1 - dist / maxDist;
+    const height = 1.4 + this.camDist * Math.sin(this.camPitch) + blocked * 3.5;
     return out.set(this.position.x + sx * dist, height, this.position.z + sz * dist);
   }
 
@@ -151,8 +156,19 @@ export class PlayerController {
   }
 
   private updateCamera(dt: number) {
-    // Gently swing the camera behind the direction of travel.
-    if (this.moving && this.controls.move.y > 0.3) {
+    // Free look: drag to orbit and tilt, pinch or wheel to zoom.
+    const look = this.controls.look;
+    if (look.lengthSq() > 0) {
+      this.camYaw -= look.x * 0.006;
+      this.camPitch = THREE.MathUtils.clamp(this.camPitch + look.y * 0.004, 0.12, 1.25);
+      look.set(0, 0);
+    }
+    if (this.controls.zoom !== 0) {
+      this.camDist = THREE.MathUtils.clamp(this.camDist + this.controls.zoom, 4, 22);
+      this.controls.zoom = 0;
+    }
+    // Gently swing the camera behind the direction of travel, unless the player is steering it.
+    if (this.moving && this.controls.move.y > 0.3 && this.controls.lookIdle > 2.5) {
       const behind = Math.atan2(-this.velocity.x, -this.velocity.z);
       const d = Math.atan2(Math.sin(behind - this.camYaw), Math.cos(behind - this.camYaw));
       this.camYaw += d * Math.min(1, dt * 1.2);
@@ -160,7 +176,7 @@ export class PlayerController {
     const want = this.desiredCamera(new THREE.Vector3());
     this.camPos.lerp(want, Math.min(1, dt * 5));
     this.camera.position.copy(this.camPos);
-    this.lookAt.lerp(new THREE.Vector3(this.position.x, 1.4, this.position.z), Math.min(1, dt * 8));
+    this.lookAt.lerp(new THREE.Vector3(this.position.x, 1.5, this.position.z), Math.min(1, dt * 8));
     this.camera.lookAt(this.lookAt);
   }
 }

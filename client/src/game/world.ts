@@ -130,7 +130,7 @@ export class World {
     this.renderer.setSize(w, h, false);
     this.composer.setSize(w, h);
     this.camera.aspect = w / h;
-    this.camera.fov = w < h ? 62 : 50; // wider view in portrait on phones
+    this.camera.fov = w < h ? 70 : 58; // wide enough to see the surroundings; wider in portrait on phones
     this.camera.updateProjectionMatrix();
   }
 

@@ -15,6 +15,12 @@ export class Controls {
   blocking = false;
   sneaking = false;
   tapTarget: THREE.Vector3 | null = null;
+  /** Camera look input this frame, in pixels of drag (x = yaw, y = pitch). Consumed by the player controller. */
+  readonly look = new THREE.Vector2();
+  /** Zoom input this frame (positive = further out). */
+  zoom = 0;
+  /** Seconds since the player last moved the camera by hand. */
+  lookIdle = 99;
   enabled = true;
   /** Disable tap-to-walk while fighting so taps don't fight the joystick. */
   allowTapMove = true;
@@ -50,15 +56,63 @@ export class Controls {
       this.keys.clear();
       this.mouseBlock = this.touchBlock = false;
     };
+    // Drag anywhere on the view to look around (mouse or touch); a short tap/click still
+    // walks (touch) or strikes (mouse). Two fingers pinch, or the mouse wheel, to zoom.
+    const pointers = new Map<number, { x: number; y: number; sx: number; sy: number; dragged: boolean; button: number }>();
+    let pinch = 0;
+    const DRAG = 8;
     const mouseDown = (e: PointerEvent) => {
-      if (e.pointerType !== 'mouse') return;
-      if (e.button === 0) this.fire('attack');
-      if (e.button === 2) this.mouseBlock = true;
+      if (e.pointerType === 'mouse' && e.button === 2) {
+        this.mouseBlock = true;
+        return;
+      }
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, dragged: false, button: e.button });
+      try { canvas.setPointerCapture(e.pointerId); } catch { /* synthetic or already released */ }
+      if (pointers.size === 2) {
+        const [a, b] = [...pointers.values()];
+        pinch = Math.hypot(a!.x - b!.x, a!.y - b!.y);
+      }
+    };
+    const move = (e: PointerEvent) => {
+      const p = pointers.get(e.pointerId);
+      if (!p) return;
+      const dx = e.clientX - p.x, dy = e.clientY - p.y;
+      p.x = e.clientX;
+      p.y = e.clientY;
+      if (!p.dragged && Math.hypot(p.x - p.sx, p.y - p.sy) > DRAG) p.dragged = true;
+      if (pointers.size === 2) {
+        const [a, b] = [...pointers.values()];
+        const d = Math.hypot(a!.x - b!.x, a!.y - b!.y);
+        this.zoom += (pinch - d) * 0.03;
+        pinch = d;
+        a!.dragged = b!.dragged = true;
+      } else if (p.dragged) {
+        this.look.x += dx;
+        this.look.y += dy;
+      }
+      if (p.dragged) this.lookIdle = 0;
     };
     const mouseUp = (e: PointerEvent) => {
-      if (e.pointerType === 'mouse' && e.button === 2) this.mouseBlock = false;
-      if (e.pointerType !== 'mouse') this.onTap(e);
+      if (e.pointerType === 'mouse' && e.button === 2) {
+        this.mouseBlock = false;
+        return;
+      }
+      const p = pointers.get(e.pointerId);
+      pointers.delete(e.pointerId);
+      if (!p || p.dragged) return;
+      if (e.pointerType === 'mouse') {
+        if (p.button === 0) this.fire('attack');
+      } else this.onTap(e);
     };
+    const cancel = (e: PointerEvent) => pointers.delete(e.pointerId);
+    const wheel = (e: WheelEvent) => {
+      e.preventDefault();
+      this.zoom += Math.sign(e.deltaY) * 0.8;
+      this.lookIdle = 0;
+    };
+    canvas.addEventListener('pointermove', move);
+    canvas.addEventListener('pointercancel', cancel);
+    canvas.addEventListener('wheel', wheel, { passive: false });
     const noMenu = (e: Event) => e.preventDefault();
     addEventListener('keydown', down);
     addEventListener('keyup', up);
@@ -73,6 +127,9 @@ export class Controls {
       canvas.removeEventListener('pointerdown', mouseDown);
       canvas.removeEventListener('pointerup', mouseUp);
       canvas.removeEventListener('contextmenu', noMenu);
+      canvas.removeEventListener('pointermove', move);
+      canvas.removeEventListener('pointercancel', cancel);
+      canvas.removeEventListener('wheel', wheel);
     };
     this.buildTouchUi(hud);
   }
@@ -180,6 +237,10 @@ export class Controls {
 
   update() {
     const k = this.keys;
+    // Keyboard camera turn: Q / R.
+    if (k.has('KeyQ')) { this.look.x -= 6; this.lookIdle = 0; }
+    if (k.has('KeyR')) { this.look.x += 6; this.lookIdle = 0; }
+    this.lookIdle += 1 / 60;
     const kx = (k.has('KeyD') || k.has('ArrowRight') ? 1 : 0) - (k.has('KeyA') || k.has('ArrowLeft') ? 1 : 0);
     const ky = (k.has('KeyW') || k.has('ArrowUp') ? 1 : 0) - (k.has('KeyS') || k.has('ArrowDown') ? 1 : 0);
     this.move.set(kx, ky).add(this.joy);
