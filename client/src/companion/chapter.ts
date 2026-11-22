@@ -693,7 +693,8 @@ export class CompanionChapter {
             seen = Math.max(seen, w.sees(p, this.colliders));
           }
           const still = !this.player.moving;
-          const rate = seen > 0 ? (pause > 0 && !still ? 1.4 : pause > 0 ? 0.35 : 0.5) * (this.controls.sneaking ? 0.5 : 1) * (0.5 + seen) : -0.4;
+          // Only Ali's signal makes it dangerous: while he stands "pouring water", a watcher must not see you moving.
+          const rate = pause > 0 && seen > 0 ? (still ? 0.1 : 1.3) * (this.controls.sneaking ? 0.5 : 1) * (0.5 + seen) : -0.35;
           detect = THREE.MathUtils.clamp(detect + rate * dt, 0, 1);
           const dist = p.distanceTo(ap);
           farFor = dist > 24 ? farFor + dt : 0;
