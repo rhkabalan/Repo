@@ -9,7 +9,8 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "build:offline": "tsc --noEmit && VITE_OFFLINE=1 vite build --base ./ --outDir dist-offline"
+    "build:offline": "tsc --noEmit && VITE_OFFLINE=1 vite build --base ./ --outDir dist-offline",
+    "build:timeline": "tsc --noEmit && TIMELINE=1 vite build --base ./ --outDir dist-timeline"
   },
   "dependencies": {
     "three": "^0.187.0",

@@ -115,10 +115,21 @@ namespace Athar.Game
         VisualElement Sheet(float maxWidth = 760)
         {
             Clear();
+            // Out of play, menus sit over the period painting of Mecca (art/locations).
+            if (!playing)
+            {
+                var backdrop = new VisualElement();
+                backdrop.style.position = Position.Absolute;
+                backdrop.style.left = 0; backdrop.style.right = 0; backdrop.style.top = 0; backdrop.style.bottom = 0;
+                var art = Resources.Load<Texture2D>("Locations/mecca-kaaba");
+                if (art) backdrop.style.backgroundImage = new StyleBackground(art);
+                backdrop.style.unityBackgroundScaleMode = ScaleMode.ScaleAndCrop;
+                ui.Layer.Add(backdrop);
+            }
             var shade = new VisualElement();
             shade.style.position = Position.Absolute;
             shade.style.left = 0; shade.style.right = 0; shade.style.top = 0; shade.style.bottom = 0;
-            shade.style.backgroundColor = new Color(0.08f, 0.05f, 0.03f, playing ? 0.75f : 0.92f);
+            shade.style.backgroundColor = new Color(0.08f, 0.05f, 0.03f, playing ? 0.75f : 0.62f);
             shade.style.alignItems = Align.Center; shade.style.justifyContent = Justify.Center;
             var sheet = new ScrollView();
             sheet.style.maxWidth = maxWidth;
