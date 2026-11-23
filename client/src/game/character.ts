@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { cloth } from './textures';
 
@@ -39,6 +40,8 @@ export const LOOKS: Record<string, Look> = {
 };
 
 const gltf = new GLTFLoader();
+// The shipped models are compressed with meshopt (gltf-transform optimize).
+gltf.setMeshoptDecoder(MeshoptDecoder);
 const modelCache = new Map<string, Promise<{ scene: THREE.Object3D; animations: THREE.AnimationClip[] }>>();
 
 /**
@@ -256,7 +259,10 @@ export class Character {
         if ((o as THREE.Mesh).isMesh) o.castShadow = o.receiveShadow = true;
       });
       // Normalise height to ~1.75m with feet on the ground.
-      const box = new THREE.Box3().setFromObject(model);
+      // Measure the skinned mesh as posed by its bones ("precise"): the armature in these files
+      // carries a unit scale (centimetres), which a plain bounding box would miss.
+      model.updateMatrixWorld(true);
+      const box = new THREE.Box3().setFromObject(model, true);
       const scale = 1.75 / (box.max.y - box.min.y || 1);
       model.scale.setScalar(scale);
       model.position.y = -box.min.y * scale;

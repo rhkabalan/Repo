@@ -7,6 +7,7 @@
 import * as THREE from 'three';
 import type { Collider } from '../game/mecca';
 import { cloth, plaster, sand, stoneBlocks, wood } from '../game/textures';
+import { prop } from './props';
 
 export interface SceneBase {
   group: THREE.Group;
@@ -74,6 +75,9 @@ function addHills(g: THREE.Group, r: () => number, color: string, near = 140, co
 }
 
 function acacia(r: () => number) {
+  return prop('acacia', acaciaStandIn(r), 4.2 + r() * 1.2);
+}
+function acaciaStandIn(r: () => number) {
   const t = new THREE.Group();
   const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.16, 2.2, 6), mat('#5b4330'));
   trunk.position.y = 1.1;
@@ -88,6 +92,9 @@ function acacia(r: () => number) {
 
 /** A low-poly dromedary. */
 export function camel(color = '#b38a5a') {
+  return prop('camel', camelStandIn(color), 2.3, { rotY: Math.PI / 2 });
+}
+function camelStandIn(color: string) {
   const c = new THREE.Group();
   const m = mat(color, 1);
   const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.42, 1.1, 8, 14), m);
@@ -141,6 +148,9 @@ export function camel(color = '#b38a5a') {
 
 /** A black goat-hair tent with woven side panels. */
 function tent(r: () => number, w = 6, d = 4) {
+  return prop('tent', tentStandIn(r, w, d), 2.4, { fit: 'width', width: Math.max(w, d) });
+}
+function tentStandIn(r: () => number, w: number, d: number) {
   const t = new THREE.Group();
   const hair = mat('#2a2421', 1, cloth('#2c2622', '#3a322c'));
   const roof = new THREE.Mesh(new THREE.BoxGeometry(w, 0.06, d), hair);
@@ -171,6 +181,9 @@ function tent(r: () => number, w = 6, d = 4) {
 }
 
 function well(withPulley = true) {
+  return prop('well', wellStandIn(withPulley), withPulley ? 2.4 : 1.2, { fit: 'width', width: 2.5 });
+}
+function wellStandIn(withPulley: boolean) {
   const w = new THREE.Group();
   const stone = mat('#8d7a62', 0.95, stoneBlocks(5));
   const ring = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.2, 0.9, 18, 1, true), stone);
@@ -235,6 +248,11 @@ export function buildGhifar(): GhifarScene {
   g.add(ad);
   block(-2, -24, 4.5, 3.4);
 
+  for (const [x, z] of [[1.4, -22.6], [-12, -1.5], [13, -10]] as const) {
+    const jars = prop('jars', new THREE.Group(), 0.9);
+    jars.position.set(x, 0, z);
+    g.add(jars);
+  }
   // The widow's fallen tent: cloth on the ground until raised.
   const widow = new THREE.Group();
   widow.position.set(-9, 0, 14);
@@ -347,7 +365,10 @@ export function buildGhifar(): GhifarScene {
     update(_dt, t) {
       flame.scale.set(1 + Math.sin(t * 13) * 0.1, 1 + Math.sin(t * 9) * 0.2, 1);
       if (fire.intensity > 0) fire.intensity = 26 + Math.sin(t * 17) * 4;
-      for (const [i, c] of camels.entries()) (c.userData.head as THREE.Object3D).position.y = 2.62 + Math.sin(t * 1.3 + i) * 0.05;
+      for (const [i, c] of camels.entries()) {
+        const head = c.children[0]?.userData.head as THREE.Object3D | undefined; // only the stand-in has one
+        if (head) head.position.y = 2.62 + Math.sin(t * 1.3 + i) * 0.05;
+      }
     },
   };
 }
@@ -502,8 +523,9 @@ export function buildMeccaValley(): MeccaValley {
         beam.position.set(-w / 2 + 0.6 + i * ((w - 1.2) / 3), h - 0.4, d / 2 + 0.2);
         house.add(beam);
       }
-      house.position.set(x, 0, z);
-      g.add(shadowed(house));
+      const houseProp = prop('house', shadowed(house), h + 0.3, { fit: 'width', width: Math.max(w, d) });
+      houseProp.position.set(x, 0, z);
+      g.add(houseProp);
       block(x, z, w, d);
     }
   }
@@ -540,9 +562,10 @@ export function buildMeccaValley(): MeccaValley {
   const mat2 = new THREE.Mesh(new THREE.BoxGeometry(3, 0.04, 2.2), mat('#7a2e22', 1, cloth('#7a2e22', '#c7963e')));
   mat2.position.y = 0.03;
   shade.add(mat2);
-  shade.position.set(-29.4, 0, -61.4);
-  shade.rotation.y = Math.PI * 0.25;
-  g.add(shadowed(shade));
+  const shadeProp = prop('shade', shadowed(shade), 2.8, { fit: 'width', width: 4.4 });
+  shadeProp.position.set(-29.4, 0, -61.4);
+  shadeProp.rotation.y = Math.PI * 0.25;
+  g.add(shadeProp);
 
   // Market lane south of the court.
   const stallCloth = [cloth('#a8452a', '#d9a046'), cloth('#2f5a6a', '#d8c39a'), cloth('#6a4a2a', '#e0c08a')];
@@ -565,8 +588,9 @@ export function buildMeccaValley(): MeccaValley {
       jar.position.set(-1 + j * 0.7, 0.28, 0);
       stall.add(jar);
     }
-    stall.position.set(side * 5.5, 0, z);
-    g.add(shadowed(stall));
+    const stallProp = prop('stall', shadowed(stall), 2.6, { fit: 'width', width: 3.6 });
+    stallProp.position.set(side * 5.5, 0, z);
+    g.add(stallProp);
     block(side * 5.5, z, 3.4, 2.4);
   }
 
@@ -624,6 +648,9 @@ export function buildMeccaValley(): MeccaValley {
 
 // ====================================================================== shared props
 function palm(r: () => number, h = 6 + r() * 4) {
+  return prop('palm', palmStandIn(r, h), h + 1.5);
+}
+function palmStandIn(r: () => number, h: number) {
   const p = new THREE.Group();
   const trunkMat = mat('#6b5236', 1);
   const segs = 7;
@@ -725,9 +752,11 @@ export function buildMedina(): MedinaScene {
     if (z > 18 && Math.abs(x) < 10) continue; // keep the southern approach clear
     if (x > 24 && x < 60 && z > -60 && z < -20) continue; // the north-east garden
     const w = 5 + r() * 3, dd = 5 + r() * 3, h = 3 + r() * 1.5;
-    const house = new THREE.Mesh(new THREE.BoxGeometry(w, h, dd), new THREE.MeshStandardMaterial({ map: plaster(colors[i % 3]!, i), roughness: 1 }));
-    house.position.set(x, h / 2, z);
-    g.add(shadowed(house));
+    const box = new THREE.Mesh(new THREE.BoxGeometry(w, h, dd), new THREE.MeshStandardMaterial({ map: plaster(colors[i % 3]!, i), roughness: 1 }));
+    box.position.y = h / 2;
+    const house = prop('house', shadowed(box), h + 0.3, { fit: 'width', width: Math.max(w, dd) });
+    house.position.set(x, 0, z);
+    g.add(house);
     block(x, z, w, dd);
   }
   // Clan towers (atam).
@@ -940,12 +969,16 @@ export function buildDamascus(): SceneBase {
     for (const side of [-1, 1]) {
       const x = side * 6.2, z = 30 - i * 6;
       if (z < -34 && z > -46) continue; // the arch
+      const colGroup = new THREE.Group();
       const col = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.36, 5.2, 12), lime);
-      col.position.set(x, 2.6, z);
-      g.add(shadowed(col));
+      col.position.y = 2.6;
+      colGroup.add(col);
       const cap = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.35, 0.9), lime);
-      cap.position.set(x, 5.35, z);
-      g.add(shadowed(cap));
+      cap.position.y = 5.35;
+      colGroup.add(cap);
+      const column = prop('column', shadowed(colGroup), 5.5);
+      column.position.set(x, 0, z);
+      g.add(column);
       block(x, z, 0.8, 0.8);
     }
   }
@@ -1057,14 +1090,17 @@ export function buildJabalAmil(): SceneBase {
     crown.scale.set(1.2, 0.8, 1.2);
     crown.position.y = 2.2;
     tree.add(crown);
-    tree.position.set(x, 0, z);
-    g.add(shadowed(tree));
+    const olive = prop('olive', shadowed(tree), 3.6 + r() * 1.2);
+    olive.position.set(x, 0, z);
+    g.add(olive);
     if (i % 5 === 0 && olives.length < 5) olives.push(v3(x + 1.6, 0, z));
   }
   // The olive press.
   const press = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.5, 0.8, 16), terraceMat);
-  press.position.set(-16, 0.4, 18);
-  g.add(shadowed(press));
+  const pressProp = prop('press', shadowed(press), 1.6, { fit: 'width', width: 3.2 });
+  press.position.y = 0.4;
+  pressProp.position.set(-16, 0, 18);
+  g.add(pressProp);
   block(-16, 18, 3, 3);
   // Villages: Sarafand by the sea, Mays toward the hills.
   const house = (x: number, z: number) => {
@@ -1111,6 +1147,9 @@ export function buildJabalAmil(): SceneBase {
 
 // ====================================================================== al-Rabadhah
 export function sheep() {
+  return prop('sheep', sheepStandIn(), 0.95);
+}
+function sheepStandIn() {
   const s = new THREE.Group();
   const wool = mat('#e8e0d0', 1);
   const body = new THREE.Mesh(new THREE.SphereGeometry(0.45, 12, 10), wool);
@@ -1154,6 +1193,9 @@ export function buildRabadhah(): SceneBase {
     if (a.position.length() < 14) continue;
     g.add(a);
   }
+  const jars = prop('jars', new THREE.Group(), 0.9);
+  jars.position.set(-1, 0, -3.6);
+  g.add(jars);
   // The road to Iraq, east.
   const road = new THREE.Mesh(new THREE.PlaneGeometry(140, 2.6), mat('#b8966a', 1));
   road.rotation.x = -Math.PI / 2;

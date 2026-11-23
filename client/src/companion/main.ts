@@ -4,7 +4,8 @@
  */
 import '../styles.css';
 import './companion.css';
-import { LOOKS, type Look } from '../game/character';
+import { LOOKS } from '../game/character';
+import { DESIGNS, designFor } from '../game/cast';
 import { World } from '../game/world';
 import { setLang } from '../i18n';
 import { journey, type JourneyStop } from '../../../backend/src/journey/content/companion';
@@ -123,7 +124,10 @@ async function begin(chapterId: string) {
     world.start();
   }
   narrator.voice = voice;
-  const chapter = new CompanionChapter(world, hud, narrator, () => lang, LOOKS[look] as Look, () => journeyMap(), chapterId);
+  // You wear the design you chose; Abu Dharr wears another (the Elder, or the Steadfast if you chose the Elder).
+  const mine = designFor(look);
+  const his = look === 'elder' ? DESIGNS.steadfast : DESIGNS.elder;
+  const chapter = new CompanionChapter(world, hud, narrator, () => lang, mine, his, () => journeyMap(), chapterId);
   // Test hook: ?debug exposes the chapter for automated walkthroughs.
   if (location.search.includes('debug')) (window as unknown as { __chapter: unknown }).__chapter = chapter;
   await chapter.start();

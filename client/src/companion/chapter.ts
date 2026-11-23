@@ -7,6 +7,7 @@
 import * as THREE from 'three';
 import { deeds, hasanatRule, objectives, type L } from '../../../backend/src/journey/content/companion';
 import { Character, LOOKS, type Look } from '../game/character';
+import type { Design } from '../game/cast';
 import { Effects, Enemy, Fight, PlayerCombat, statsFor, type CombatEvent } from '../game/combat';
 import { Controls } from '../game/controls';
 import { camel } from './env';
@@ -94,12 +95,13 @@ export class CompanionChapter {
     private readonly hud: HTMLElement,
     private readonly narrator: Narrator,
     private readonly lang: () => Lang,
-    private readonly look: Look,
+    private readonly design: Design,
+    private readonly adDesign: Design,
     private readonly onExit: () => void,
     private readonly chapterId: string = 'seeker',
   ) {
     this.buildHud();
-    const me = new Character(look);
+    const me = new Character(design.look, design.model, design.clips);
     me.equipStaff();
     world.scene.add(me.root);
     this.controls = new Controls(world.canvas, world.camera, this.sceneOf(this.firstScene()).ground, hud);
@@ -109,7 +111,9 @@ export class CompanionChapter {
     this.controls.on('dodge', () => this.dodge());
     this.effects = new Effects(world.scene);
 
-    this.abuDharr = this.actor(LOOKS.abuDharr!);
+    this.abuDharr = new Character(adDesign.look, adDesign.model, adDesign.clips);
+    this.world.scene.add(this.abuDharr.root);
+    this.actors.push(this.abuDharr);
     this.unays = this.actor(LOOKS.companion1!);
     this.unays.root.visible = false;
 

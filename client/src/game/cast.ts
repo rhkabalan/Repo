@@ -5,8 +5,8 @@ import { LOOKS, type Look } from './character';
  * rigged 3D model is ready, drop the .glb in public/models/ and set `model`; every
  * character using that design switches over, keeping the stand-in as fallback.
  */
-/** Where generated models are served from until they are copied into public/models. */
-const MODEL_CDN = 'https://d8j0ntlcm91z4.cloudfront.net/user_38DJH2MZxmBs8rcoGInHY3dJHJE';
+/** Generated models, compressed with gltf-transform (meshopt + webp) and served with the app. */
+const M = (name: string) => `${import.meta.env.BASE_URL}models/${name}.glb`;
 
 export interface Design {
   look: Look;
@@ -20,26 +20,26 @@ export const DESIGNS: Record<'traveler' | 'steadfast' | 'elder', Design> = {
   traveler: {
     look: LOOKS.traveler!,
     // Generated from art/concepts/traveler (Higgsfield multi-view → rigged, walk clip built in).
-    model: `${MODEL_CDN}/hf_20261119_014717_c5558e0c-b2ab-4148-88ec-1366c23a3a74.glb`,
+    model: M('traveler'),
     clips: {
-      idle: `${MODEL_CDN}/hf_20261119_015942_f6d34e6c-b465-4684-89c9-942dabaad33d.glb`,
-      run: `${MODEL_CDN}/hf_20261119_015943_79bdcd5c-2c4b-40ee-a293-3314b6373e46.glb`,
+      idle: M('traveler-idle'),
+      run: M('traveler-run'),
     },
   },
   steadfast: {
     look: LOOKS.steadfast!,
-    model: `${MODEL_CDN}/hf_20261119_021650_a8b10fc6-c05b-444e-82d1-759d2e541ff3.glb`,
+    model: M('steadfast'),
     clips: {
-      idle: `${MODEL_CDN}/hf_20261119_022825_2570af75-f4a3-4916-8bd2-8d88a488e998.glb`,
-      run: `${MODEL_CDN}/hf_20261119_022826_8bf73be0-0a65-4cd7-aca2-3c913515ffe1.glb`,
+      idle: M('steadfast-idle'),
+      run: M('steadfast-run'),
     },
   },
   elder: {
     look: LOOKS.elder!,
-    model: `${MODEL_CDN}/hf_20261119_021652_baa0b0c5-0456-42ef-9f6d-60fc8b743160.glb`,
+    model: M('elder'),
     clips: {
-      idle: `${MODEL_CDN}/hf_20261119_022827_2cb37b63-0956-47bd-9a66-71e21a78a869.glb`,
-      run: `${MODEL_CDN}/hf_20261119_022828_4b416458-9afc-451e-912c-63bf113dc3c4.glb`,
+      idle: M('elder-idle'),
+      run: M('elder-run'),
     },
   },
 };
