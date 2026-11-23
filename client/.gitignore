@@ -1,0 +1,5 @@
+node_modules/
+dist/
+dist-offline/
+dist-timeline/
+dist-companion/
