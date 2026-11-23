@@ -28,7 +28,7 @@ function load(name: PropName) {
   let p = cache.get(name);
   if (!p) {
     p = loader
-      .loadAsync(`${import.meta.env.BASE_URL}props/${name}.glb`)
+      .loadAsync(`${import.meta.env.BASE_URL}props/${name}.json`)
       .then((g) => {
         const root = g.scene;
         root.traverse((o) => {

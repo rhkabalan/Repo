@@ -6,7 +6,7 @@ import { LOOKS, type Look } from './character';
  * character using that design switches over, keeping the stand-in as fallback.
  */
 /** Generated models, compressed with gltf-transform (meshopt + webp) and served with the app. */
-const M = (name: string) => `${import.meta.env.BASE_URL}models/${name}.glb`;
+const M = (name: string) => `${import.meta.env.BASE_URL}models/${name}.json`;
 
 export interface Design {
   look: Look;
